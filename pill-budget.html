@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+  <!-- App Icon & PWA Meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PILL Budget">
+  <meta name="theme-color" content="#0e0f0c">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPgogIDxyZWN0IHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHJ4PSIyMDAiIGZpbGw9IiMwZTBmMGMiLz4KICA8cmVjdCB4PSI4MCIgeT0iODAiIHdpZHRoPSI4NjQiIGhlaWdodD0iODY0IiByeD0iMTYwIiBmaWxsPSIjMTYxNzE0Ii8+CiAgPHRleHQgeD0iNTEyIiB5PSI1ODAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLCBzZXJpZiIgZm9udC1zaXplPSIzODAiIGZvbnQtd2VpZ2h0PSJib2xkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjYzhmMDYwIj5QPC90ZXh0PgogIDx0ZXh0IHg9IjUxMiIgeT0iODIwIiBmb250LWZhbWlseT0iR2VvcmdpYSwgc2VyaWYiIGZvbnQtc2l6ZT0iMTAwIiBsZXR0ZXItc3BhY2luZz0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM3YTdiNzYiPklMTDwvdGV4dD4KPC9zdmc+">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PILL Method Budget Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f0c;
+    --surface: #161714;
+    --surface2: #1e1f1b;
+    --border: #2a2b27;
+    --accent: #c8f060;
+    --accent2: #f0c840;
+    --accent3: #60d4f0;
+    --danger: #f06060;
+    --text: #e8e9e4;
+    --muted: #7a7b76;
+    --pill-green: #4caf7d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* BACKGROUND TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(200,240,96,0.04) 0%, transparent 60%),
+                      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(96,212,240,0.03) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo-block h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: -1px;
+    color: var(--accent);
+  }
+
+  .logo-block h1 span {
+    color: var(--text);
+    opacity: 0.3;
+  }
+
+  .logo-block p {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tagline {
+    text-align: right;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.8;
+    max-width: 220px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    width: fit-content;
+  }
+
+  .tab {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 500;
+  }
+
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* ===== MOBILE OVERRIDES ===== */
+  .debt-cards-mobile { display: none; }
+
+  @media (max-width: 650px) {
+    .app { padding: 20px 12px 60px; }
+    header { flex-direction: column; gap: 8px; margin-bottom: 24px; }
+    .logo-block h1 { font-size: 36px; }
+    .tagline { text-align: left; max-width: 100%; }
+    .tabs { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+    .tab { flex-shrink: 0; padding: 9px 12px; font-size: 10px; }
+    .card { padding: 14px; }
+    .card-title { font-size: 15px; }
+    .debt-item .grid-3 { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-value { font-size: 20px; }
+    .pill-meter .grid-3 { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .strategy-value { font-size: 16px; }
+    .strategy-label { font-size: 11px; }
+    .btn { padding: 13px 16px; font-size: 12px; }
+    .btn-sm { padding: 9px 12px; font-size: 10px; }
+    input[type="number"], input[type="text"] { font-size: 16px; padding: 11px 12px; }
+    .input-prefix input { padding-left: 26px; }
+    /* Hide wide table, show stacked cards */
+    .debt-table-wrap { display: none !important; }
+    .debt-cards-mobile { display: block !important; }
+    /* footer note smaller */
+    .footer-note { font-size: 10px; }
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .card-sub {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* FORM ELEMENTS */
+  .field {
+    margin-bottom: 14px;
+  }
+
+  label {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  input[type="number"], input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: var(--accent); }
+
+  .input-prefix {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-prefix span {
+    position: absolute;
+    left: 12px;
+    color: var(--muted);
+    pointer-events: none;
+    font-size: 13px;
+  }
+
+  .input-prefix input { padding-left: 24px; }
+
+  /* DEBT ITEM */
+  .debt-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .debt-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .debt-type-badge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .badge-mortgage { background: rgba(200,240,96,0.12); color: var(--accent); }
+  .badge-car { background: rgba(96,212,240,0.12); color: var(--accent3); }
+  .badge-credit { background: rgba(240,200,64,0.12); color: var(--accent2); }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.2s;
+  }
+
+  .remove-btn:hover { color: var(--danger); }
+
+  /* BUTTON */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover { background: #d8ff70; transform: translateY(-1px); }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-sm { padding: 7px 14px; font-size: 11px; }
+
+  .add-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* SUMMARY STATS */
+  .stat-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .stat-value.green { color: var(--accent); }
+  .stat-value.yellow { color: var(--accent2); }
+  .stat-value.blue { color: var(--accent3); }
+  .stat-value.red { color: var(--danger); }
+
+  .stat-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* PILL METER */
+  .pill-meter {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .pill-meter-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  .pill-meter-sub {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 20px;
+  }
+
+  .meter-bar-wrap {
+    background: var(--surface2);
+    border-radius: 100px;
+    height: 12px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .meter-bar {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .meter-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  /* DEBT TABLE */
+  .debt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+
+  .debt-table th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .debt-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid rgba(42,43,39,0.6);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  .debt-table tr:last-child td { border-bottom: none; }
+
+  .priority-badge {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .p1 { background: var(--accent); color: var(--bg); }
+  .p2 { background: var(--accent2); color: var(--bg); }
+  .p3 { background: var(--accent3); color: var(--bg); }
+
+  /* PROGRESS BARS IN TABLE */
+  .mini-bar-wrap {
+    background: var(--surface2);
+    border-radius: 100px;
+    height: 6px;
+    overflow: hidden;
+    width: 80px;
+  }
+
+  .mini-bar {
+    height: 100%;
+    border-radius: 100px;
+  }
+
+  /* PREPAYMENT STRATEGY */
+  .strategy-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .strategy-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .strategy-row:last-child { border-bottom: none; }
+
+  .strategy-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .strategy-value { font-family: 'DM Serif Display', serif; font-size: 20px; }
+
+  /* ALERTS */
+  .alert {
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .alert-success { background: rgba(200,240,96,0.08); border: 1px solid rgba(200,240,96,0.2); color: var(--accent); }
+  .alert-warn { background: rgba(240,200,64,0.08); border: 1px solid rgba(240,200,64,0.2); color: var(--accent2); }
+  .alert-info { background: rgba(96,212,240,0.08); border: 1px solid rgba(96,212,240,0.2); color: var(--accent3); }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* SECTION HEADER */
+  .section-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-hdr h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+  }
+
+  /* TOOLTIP */
+  .tip {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 10px;
+    text-align: center;
+    line-height: 15px;
+    cursor: help;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* ANIMATE IN */
+  .panel.active .card, .panel.active .pill-meter, .panel.active .strategy-card {
+    animation: fadeUp 0.3s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* FOOTER NOTE */
+  .footer-note {
+    margin-top: 40px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  .inline-accent { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo-block">
+      <h1>P<span>.</span>I<span>.</span>L<span>.</span>L<span>.</span></h1>
+      <p>Principal Interest Liberation Ledger &nbsp;·&nbsp; Don Daniel Method</p>
+    </div>
+    <div style="text-align:right;">
+      <div class="tagline" style="margin-bottom:10px;">
+        Interest cancellation<br>over balance reduction.<br>
+        <span style="color:var(--accent);">Every penny optimized.</span>
+      </div>
+      <div id="save-indicator" style="font-size:11px;min-height:16px;transition:opacity .3s;"></div>
+      <button onclick="clearSavedData()" class="btn btn-outline btn-sm" style="margin-top:8px;font-size:10px;padding:5px 12px;">↺ Reset to Defaults</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('income')">① Income & Expenses</button>
+    <button class="tab" onclick="switchTab('debts')">② Debts</button>
+    <button class="tab" onclick="switchTab('strategy')">③ PILL Strategy</button>
+    <button class="tab" onclick="switchTab('advisor')">④ Advisor</button>
+    <button class="tab" onclick="switchTab('accounts')">⑤ Accounts</button>
+  </div>
+
+  <!-- ===== PANEL 1: INCOME & EXPENSES ===== -->
+  <div class="panel active" id="panel-income">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Monthly Income</div>
+        <div class="card-sub">All take-home sources</div>
+
+        <div class="field">
+          <label>FINKA (Primary Income)</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="inc-primary" placeholder="0.00" oninput="recalc()"></div>
+        </div>
+        <div class="field">
+          <label>Ron</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="inc-secondary" placeholder="0.00" oninput="recalc()"></div>
+        </div>
+        <div class="field">
+          <label>Aidan</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="inc-side" placeholder="0.00" oninput="recalc()"></div>
+        </div>
+        <div class="field">
+          <label>Meme</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="inc-other" placeholder="0.00" oninput="recalc()"></div>
+        </div>
+        <hr class="divider">
+        <div class="stat-block" style="margin-bottom:0">
+          <div class="stat-label">Total Monthly Income</div>
+          <div class="stat-value green" id="total-income">$0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Monthly Expenses</div>
+        <div class="card-sub">Fixed & variable (excl. debt payments)</div>
+
+        <div class="field"><label>Lawn Service</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="exp-grocery" placeholder="0.00" oninput="recalc()"></div></div>
+        <div class="field"><label>Utilities (Dominion Electric + Fairfax Water)</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="exp-utilities" placeholder="0.00" oninput="recalc()"></div></div>
+        <div class="field"><label>Insurance (State Farm)</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="exp-insurance" placeholder="0.00" oninput="recalc()"></div></div>
+        <div class="field"><label>Subscriptions (X3Bar + Gainful + Envelope)</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="exp-subs" placeholder="0.00" oninput="recalc()"></div></div>
+        <div class="field"><label>Transportation (Gas, Transit)</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="exp-transport" placeholder="0.00" oninput="recalc()"></div></div>
+        <div class="field"><label>Tithe & Offering (Adventist + Light Bearers)</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="exp-dining" placeholder="0.00" oninput="recalc()"></div></div>
+        <div class="field"><label>Other Living Expenses</label>
+          <div class="input-prefix"><span>$</span><input type="number" id="exp-other" placeholder="0.00" oninput="recalc()"></div></div>
+        <hr class="divider">
+        <div class="stat-block" style="margin-bottom:0">
+          <div class="stat-label">Total Monthly Expenses</div>
+          <div class="stat-value yellow" id="total-expenses">$0</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;" class="grid-3">
+      <div class="stat-block">
+        <div class="stat-label">Total Debt Payments</div>
+        <div class="stat-value red" id="stat-debt-pmts">$0</div>
+        <div class="stat-note">Sum of min. payments</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Total Outflow</div>
+        <div class="stat-value" id="stat-outflow">$0</div>
+        <div class="stat-note">Expenses + debt payments</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Available for PILL Prepay <span class="tip" title="This is the 'power of the penny' pool — funds you can redirect to cancel interest.">?</span></div>
+        <div class="stat-value green" id="stat-available">$0</div>
+        <div class="stat-note">Income − total outflow</div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;text-align:right">
+      <button class="btn btn-primary" onclick="switchTab('debts')">Next: Enter Debts →</button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL 2: DEBTS ===== -->
+  <div class="panel" id="panel-debts">
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-hdr">
+        <div>
+          <div class="card-title">Your Debts</div>
+          <div class="card-sub">Enter balance, rate, min payment & remaining term</div>
+        </div>
+      </div>
+
+      <div id="debt-list"></div>
+
+      <div class="add-btns">
+        <button class="btn btn-outline btn-sm" onclick="addDebt('mortgage')">+ Mortgage</button>
+        <button class="btn btn-outline btn-sm" onclick="addDebt('car')">+ Car Loan</button>
+        <button class="btn btn-outline btn-sm" onclick="addDebt('credit')">+ Credit Card</button>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="stat-block">
+        <div class="stat-label">Total Debt Balance</div>
+        <div class="stat-value red" id="stat-total-debt">$0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Blended Interest Rate</div>
+        <div class="stat-value yellow" id="stat-blended-rate">0.00%</div>
+        <div class="stat-note">Weighted avg APR</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Total Min. Payments</div>
+        <div class="stat-value" id="stat-min-pmts">$0</div>
+        <div class="stat-note">Per month</div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;justify-content:space-between;">
+      <button class="btn btn-outline" onclick="switchTab('income')">← Back</button>
+      <button class="btn btn-primary" onclick="switchTab('strategy')">Calculate PILL Strategy →</button>
+    </div>
+  </div>
+
+  <!-- ===== PANEL 3: STRATEGY ===== -->
+  <div class="panel" id="panel-strategy">
+
+    <div class="pill-meter">
+      <div class="pill-meter-title">PILL Opportunity Score</div>
+      <div class="pill-meter-sub">How much interest you can cancel vs. minimum-only payments</div>
+      <div class="meter-bar-wrap">
+        <div class="meter-bar" id="opp-bar" style="width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div>
+      </div>
+      <div class="meter-labels">
+        <span>Minimum Only</span>
+        <span id="opp-pct">0%</span>
+        <span>Maximum Savings</span>
+      </div>
+
+      <div class="grid-3">
+        <div>
+          <div class="stat-label">Est. Interest (Min Only)</div>
+          <div class="stat-value red" id="interest-min" style="font-size:22px">$0</div>
+        </div>
+        <div>
+          <div class="stat-label">Est. Interest (w/ PILL)</div>
+          <div class="stat-value green" id="interest-pill" style="font-size:22px">$0</div>
+        </div>
+        <div>
+          <div class="stat-label">Potential Savings</div>
+          <div class="stat-value yellow" id="interest-saved" style="font-size:22px">$0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strategy-card">
+      <div class="section-hdr">
+        <h3>PILL Prepayment Plan</h3>
+        <span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em">Monthly allocation</span>
+      </div>
+
+      <div id="alert-zone"></div>
+
+      <div class="strategy-row">
+        <span class="strategy-label">Available Prepay Pool</span>
+        <span class="strategy-value green" id="s-pool">$0</span>
+      </div>
+      <div class="strategy-row">
+        <span class="strategy-label">PILL Recommended Reserve (10%)</span>
+        <span class="strategy-value" id="s-reserve">$0</span>
+      </div>
+      <div class="strategy-row">
+        <span class="strategy-label">Active Prepayment Amount</span>
+        <span class="strategy-value yellow" id="s-prepay">$0</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-hdr">
+        <div>
+          <div class="card-title">Priority Attack Order</div>
+          <div class="card-sub">PILL Method: Target highest interest-cost-per-dollar first</div>
+        </div>
+      </div>
+      <!-- Desktop table -->
+      <div class="debt-table-wrap" style="overflow-x:auto;">
+        <table class="debt-table" style="min-width:600px;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Debt</th>
+              <th>Balance</th>
+              <th>APR</th>
+              <th>Min Pmt</th>
+              <th>Extra $</th>
+              <th>New Payoff</th>
+              <th>Int. Saved</th>
+            </tr>
+          </thead>
+          <tbody id="strategy-table"></tbody>
+        </table>
+      </div>
+      <!-- Mobile stacked cards -->
+      <div class="debt-cards-mobile" id="strategy-cards"></div>
+    </div>
+
+    <div class="footer-note">
+      <span class="inline-accent">⚡ PILL Principle:</span> Unlike snowball/avalanche, the PILL method focuses on <strong>interest cancellation at the amortization level</strong> — applying small prepayments directly to principal at the right moment to eliminate disproportionately large future interest charges. Debts are ranked by <em>interest cost per dollar owed</em> (APR × balance), not just highest rate. Your available prepay pool is distributed starting with Priority 1 until its minimum is covered, then cascades. Estimates are illustrative; actual savings depend on your lender's prepayment application policy.
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;justify-content:space-between;">
+      <button class="btn btn-outline" onclick="switchTab('debts')">← Back</button>
+      <button class="btn btn-primary" onclick="printPlan()">🖨 Print Plan</button>
+    </div>
+  </div>
+
+
+  <!-- ===== PANEL 4: ADVISOR ===== -->
+  <div class="panel" id="panel-advisor">
+
+    <!-- WHAT TO TACKLE FIRST -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🎯 Which Debt to Tackle First?</div>
+      <div class="card-sub">PILL Method Analysis — Your Personalized Attack Plan</div>
+      <div id="advisor-attack"></div>
+    </div>
+
+    <!-- BONUS CALCULATOR -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">💰 Windfall / Bonus Allocator</div>
+      <div class="card-sub">Enter any lump sum — see exactly where PILL says to apply it</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px;">
+        <div class="field" style="margin:0;flex:1;min-width:180px;">
+          <label>Bonus / Windfall Amount</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="bonus-amount" placeholder="12000" value="12000" oninput="buildAdvisor()" style="font-size:16px;">
+          </div>
+        </div>
+        <div class="field" style="margin:0;flex:1;min-width:180px;">
+          <label>Keep as Emergency Reserve</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="bonus-reserve" placeholder="0" value="1000" oninput="buildAdvisor()" style="font-size:16px;">
+          </div>
+        </div>
+      </div>
+      <div id="advisor-bonus"></div>
+    </div>
+
+    <!-- TRUE PILL AMORTIZATION SCHEDULE -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">⚡ True PILL Prepayment Schedule</div>
+      <div class="card-sub">Exact principal prepayments that cancel maximum future interest — per payment</div>
+      <div style="margin-bottom:14px;padding:12px 14px;background:rgba(200,240,96,0.06);border:1px solid rgba(200,240,96,0.15);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.7;">
+        The true PILL method works at the <strong style="color:var(--accent)">amortization schedule level</strong>. 
+        Early payments are almost entirely interest — so a small extra principal payment now cancels a disproportionately 
+        large future interest charge. This table shows your top-priority debt's next 12 payment opportunities, 
+        the exact extra principal amount, and the interest it cancels.
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;">Select Debt to View Schedule</label>
+        <select id="pill-schedule-select" onchange="buildPillSchedule()"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;width:100%;">
+        </select>
+      </div>
+      <div id="pill-schedule-display"></div>
+    </div>
+
+    <!-- PAYOFF TIMELINE -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">📅 Payoff Timeline</div>
+      <div class="card-sub">Estimated months to eliminate each debt with PILL strategy</div>
+      <div id="advisor-timeline"></div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="switchTab('strategy')">← Back to Strategy</button>
+      <button class="btn btn-primary" onclick="printPlan()">🖨 Print Plan</button>
+    </div>
+  </div>
+
+
+  <!-- ===== PANEL 5: ACCOUNTS ===== -->
+  <div class="panel" id="panel-accounts">
+
+    <!-- EMERGENCY FUND -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🛡 Emergency Fund</div>
+      <div class="card-sub">Set your target and track progress</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div class="field" style="margin:0;">
+          <label>Emergency Fund Target</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="ef-target" placeholder="15000" oninput="saveAccounts();buildAccounts()">
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Current Emergency Fund Balance</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="ef-current" placeholder="0" oninput="saveAccounts();buildAccounts()">
+          </div>
+        </div>
+      </div>
+      <div id="ef-display"></div>
+    </div>
+
+    <!-- ENVELOPE SAVINGS -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">✉️ Envelope Savings Account</div>
+      <div class="card-sub">Tracks balance + interest earned</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div class="field" style="margin:0;">
+          <label>Current Balance</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="env-balance" placeholder="0" oninput="saveAccounts();buildAccounts()">
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>APY (%)</label>
+          <input type="number" id="env-apy" placeholder="4.50" step="0.01" value="4.50"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:16px;outline:none;"
+            oninput="saveAccounts();buildAccounts()">
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Monthly Contribution</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="env-contrib" placeholder="0" oninput="saveAccounts();buildAccounts()">
+          </div>
+        </div>
+      </div>
+      <div id="env-display"></div>
+    </div>
+
+    <!-- CHECKING / BANK ACCOUNTS -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🏦 Bank & Checking Accounts</div>
+      <div class="card-sub">Enter current balances — updated monthly</div>
+      <div id="bank-list"></div>
+      <button class="btn btn-outline btn-sm" onclick="addBankAccount()" style="margin-top:8px;">+ Add Account</button>
+    </div>
+
+    <!-- CREDIT CARD LIVE BALANCES -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">💳 Credit Card Current Balances</div>
+      <div class="card-sub">Update monthly — syncs with your debt attack plan</div>
+      <div id="cc-live-list"></div>
+    </div>
+
+    <!-- NET WORTH SNAPSHOT -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">📊 Net Worth Snapshot</div>
+      <div class="card-sub">Assets minus liabilities — updated in real time</div>
+      <div id="networth-display"></div>
+    </div>
+
+    <!-- BONUS ALLOCATION WITH EMERGENCY FUND -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">💰 Smart Bonus Allocator</div>
+      <div class="card-sub">Fills emergency fund first, then attacks debt</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="field" style="margin:0;flex:1;min-width:160px;">
+          <label>Bonus / Windfall</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="acct-bonus" placeholder="12000" value="12000" oninput="saveAccounts();buildAccounts()">
+          </div>
+        </div>
+        <div class="field" style="margin:0;flex:1;min-width:160px;">
+          <label>Personal Reserve (keep liquid)</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="acct-personal-reserve" placeholder="500" value="500" oninput="saveAccounts();buildAccounts()">
+          </div>
+        </div>
+      </div>
+      <div id="smart-bonus-display"></div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="switchTab('advisor')">← Back to Advisor</button>
+      <button class="btn btn-primary" onclick="printPlan()">🖨 Print Plan</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+  let debts = [];
+  let debtCounter = 0;
+
+  // ---- TAB NAVIGATION ----
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t,i) => {
+      t.classList.toggle('active', ['income','debts','strategy','advisor','accounts'][i] === name);
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'strategy') buildStrategy();
+    if (name === 'advisor') buildAdvisor();
+    if (name === 'accounts') buildAccounts();
+  }
+
+  // ---- HELPERS ----
+  function fmt(n) {
+    if (isNaN(n) || n === null) return '$0';
+    return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+  }
+
+  function getVal(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+
+  // ---- LOCAL STORAGE SAVE/LOAD ----
+  const INPUT_IDS = [
+    'inc-primary','inc-secondary','inc-side','inc-other',
+    'exp-grocery','exp-utilities','exp-insurance','exp-subs',
+    'exp-transport','exp-dining','exp-other'
+  ];
+
+  function saveInputs() {
+    try {
+      INPUT_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) localStorage.setItem('pill_' + id, el.value);
+      });
+      // Save debts
+      localStorage.setItem('pill_debts', JSON.stringify(debts));
+      localStorage.setItem('pill_debtCounter', debtCounter);
+    } catch(e) {}
+  }
+
+  function loadSavedInputs() {
+    try {
+      const savedDebts = localStorage.getItem('pill_debts');
+      const hasSavedData = INPUT_IDS.some(id => localStorage.getItem('pill_' + id) !== null) || savedDebts;
+      if (!hasSavedData) return false; // no saved data, use defaults
+
+      INPUT_IDS.forEach(id => {
+        const val = localStorage.getItem('pill_' + id);
+        const el = document.getElementById(id);
+        if (val !== null && el) el.value = val;
+      });
+
+      if (savedDebts) {
+        debts = JSON.parse(savedDebts);
+        debtCounter = parseInt(localStorage.getItem('pill_debtCounter')) || debts.length;
+      }
+      return true;
+    } catch(e) { return false; }
+  }
+
+  function clearSavedData() {
+    try {
+      INPUT_IDS.forEach(id => localStorage.removeItem('pill_' + id));
+      localStorage.removeItem('pill_debts');
+      localStorage.removeItem('pill_debtCounter');
+      alert('Saved data cleared. Reload the page to restore defaults.');
+    } catch(e) {}
+  }
+
+  // Auto-save whenever any input changes
+  function autoSave() { saveInputs(); }
+
+  // ---- ADD DEBT ----
+  function addDebt(type) {
+    const id = ++debtCounter;
+    debts.push({ id, type, name: defaultName(type, id), balance: 0, apr: 0, minPayment: 0, months: defaultMonths(type) });
+    renderDebts();
+  }
+
+  function defaultName(type, id) {
+    const names = { mortgage: 'Mortgage', car: 'Car Loan', credit: 'Credit Card' };
+    return names[type] + (id > 1 ? ' ' + id : '');
+  }
+
+  function defaultMonths(type) {
+    return type === 'mortgage' ? 360 : type === 'car' ? 60 : 24;
+  }
+
+  function removeDebt(id) {
+    debts = debts.filter(d => d.id !== id);
+    renderDebts();
+    recalc();
+    saveInputs();
+  }
+
+  function updateDebt(id, field, val) {
+    const d = debts.find(d => d.id === id);
+    if (d) { d[field] = parseFloat(val) || 0; recalc(); saveInputs(); }
+  }
+
+  function updateDebtName(id, val) {
+    const d = debts.find(d => d.id === id);
+    if (d) { d.name = val; saveInputs(); }
+  }
+
+  function renderDebts() {
+    const list = document.getElementById('debt-list');
+    if (debts.length === 0) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px 0;text-align:center;">No debts added yet. Use the buttons below.</div>';
+      recalc(); return;
+    }
+    list.innerHTML = debts.map(d => `
+      <div class="debt-item" id="ditem-${d.id}">
+        <div class="debt-item-header">
+          <input type="text" value="${d.name}" onchange="updateDebtName(${d.id},this.value)"
+            style="background:transparent;border:none;color:var(--text);font-family:'DM Serif Display',serif;font-size:16px;outline:none;width:auto;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="debt-type-badge badge-${d.type}">${d.type}</span>
+            <button class="remove-btn" onclick="removeDebt(${d.id})">×</button>
+          </div>
+        </div>
+        <div class="grid-3" style="gap:12px;">
+          <div class="field" style="margin:0">
+            <label>Balance Owed</label>
+            <div class="input-prefix"><span>$</span>
+              <input type="number" value="${d.balance||''}" placeholder="0" oninput="updateDebt(${d.id},'balance',this.value)">
+            </div>
+          </div>
+          <div class="field" style="margin:0">
+            <label>APR (%)</label>
+            <input type="number" value="${d.apr||''}" placeholder="0.00" step="0.01" oninput="updateDebt(${d.id},'apr',this.value)"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
+          </div>
+          <div class="field" style="margin:0">
+            <label>Min. Payment / mo</label>
+            <div class="input-prefix"><span>$</span>
+              <input type="number" value="${d.minPayment||''}" placeholder="0" oninput="updateDebt(${d.id},'minPayment',this.value)">
+            </div>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Months Remaining</label>
+            <input type="number" value="${d.months||''}" placeholder="0" oninput="updateDebt(${d.id},'months',this.value)"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
+          </div>
+        </div>
+      </div>
+    `).join('');
+    recalc();
+  }
+
+  // ---- RECALC ----
+  function recalc() {
+    autoSave();
+    // Flash save indicator
+    const ind = document.getElementById('save-indicator');
+    if (ind) { ind.textContent = '💾 Saved'; ind.style.color = 'var(--muted)'; }
+    // Income
+    const income = getVal('inc-primary') + getVal('inc-secondary') + getVal('inc-side') + getVal('inc-other');
+    document.getElementById('total-income').textContent = fmt(income);
+
+    // Expenses
+    const expenses = getVal('exp-grocery') + getVal('exp-utilities') + getVal('exp-insurance') +
+                     getVal('exp-subs') + getVal('exp-transport') + getVal('exp-dining') + getVal('exp-other');
+    document.getElementById('total-expenses').textContent = fmt(expenses);
+
+    // Debt min payments total
+    const minPmts = debts.reduce((s, d) => s + d.minPayment, 0);
+    document.getElementById('stat-debt-pmts').textContent = fmt(minPmts);
+    document.getElementById('stat-min-pmts').textContent = fmt(minPmts);
+
+    const outflow = expenses + minPmts;
+    document.getElementById('stat-outflow').textContent = fmt(outflow);
+    const available = income - outflow;
+    document.getElementById('stat-available').textContent = fmt(available);
+    document.getElementById('stat-available').className = 'stat-value ' + (available < 0 ? 'red' : 'green');
+
+    // Debt summary
+    const totalDebt = debts.reduce((s,d) => s + d.balance, 0);
+    document.getElementById('stat-total-debt').textContent = fmt(totalDebt);
+
+    const weightedRate = totalDebt > 0
+      ? debts.reduce((s,d) => s + (d.apr * d.balance), 0) / totalDebt
+      : 0;
+    document.getElementById('stat-blended-rate').textContent = weightedRate.toFixed(2) + '%';
+  }
+
+  // ---- BUILD STRATEGY ----
+  function buildStrategy() {
+    recalc();
+
+    const income = getVal('inc-primary') + getVal('inc-secondary') + getVal('inc-side') + getVal('inc-other');
+    const expenses = getVal('exp-grocery') + getVal('exp-utilities') + getVal('exp-insurance') +
+                     getVal('exp-subs') + getVal('exp-transport') + getVal('exp-dining') + getVal('exp-other');
+    const minPmts = debts.reduce((s,d) => s + d.minPayment, 0);
+    const pool = income - expenses - minPmts;
+    const reserve = pool * 0.10;
+    const prepayPool = Math.max(0, pool - reserve);
+
+    document.getElementById('s-pool').textContent = fmt(pool);
+    document.getElementById('s-reserve').textContent = fmt(reserve);
+    document.getElementById('s-prepay').textContent = fmt(prepayPool);
+
+    // PILL priority: credit/consumer debt first by APR, then secured loans, mortgage last
+    function pillPriority(d) {
+      if (d.type === 'credit') return 0;
+      if (d.name && d.name.toLowerCase().includes('heloc')) return 1;
+      if (d.type === 'car') return 2;
+      return 3; // mortgage last
+    }
+    const sorted = [...debts].sort((a, b) => {
+      const pa = pillPriority(a), pb = pillPriority(b);
+      if (pa !== pb) return pa - pb;
+      return b.apr - a.apr; // within same group, highest APR first
+    });
+
+    // Estimate total interest min-only
+    function totalInterestMinOnly(d) {
+      if (d.months <= 0 || d.minPayment <= 0) return d.balance * (d.apr/100) * (d.months/12 || 5);
+      return (d.minPayment * d.months) - d.balance;
+    }
+
+    // Estimate months to payoff with extra payment
+    function newPayoffMonths(balance, apr, minPmt, extra) {
+      if (apr === 0) {
+        const pmt = minPmt + extra;
+        return pmt > 0 ? Math.ceil(balance / pmt) : 999;
+      }
+      const r = (apr / 100) / 12;
+      const pmt = minPmt + extra;
+      if (pmt <= balance * r) return 999; // won't pay off
+      return Math.ceil(-Math.log(1 - (balance * r) / pmt) / Math.log(1 + r));
+    }
+
+    // PILL CASCADE: concentrate all prepay on #1 until paid off,
+    // then that minimum + prepay rolls into #2, etc.
+    // We simulate month-by-month cascade to find steady-state extra per debt.
+    // For display: show the prepay pool on #1, then show cascaded freed minimums on subsequent debts.
+    function pillCascadeExtras(sortedDebts, prepay) {
+      // Each debt gets: full prepayPool + ALL freed minimums accumulated so far
+      let freedMinimums = 0;
+      return sortedDebts.map((d, i) => {
+        const extra = prepay + freedMinimums;
+        const months = newPayoffMonths(d.balance, d.apr, d.minPayment, extra);
+        if (months < 999 && d.minPayment > 0) {
+          freedMinimums += d.minPayment;
+        }
+        return extra;
+      });
+    }
+    const extrasActual = pillCascadeExtras(sorted, prepayPool);
+
+    // Build table
+    let totalInterestMin = 0, totalInterestPill = 0;
+    const tbody = document.getElementById('strategy-table');
+    const pClasses = ['p1','p2','p3'];
+    const colors = ['var(--accent)','var(--accent2)','var(--accent3)'];
+
+    const rows = sorted.map((d, i) => {
+      const interestMin = Math.max(0, totalInterestMinOnly(d));
+      const extra = extrasActual[i];
+      const newMonths = newPayoffMonths(d.balance, d.apr, d.minPayment, extra);
+      const interestPill = d.months > 0 && d.minPayment > 0
+        ? Math.max(0, ((d.minPayment + extra) * newMonths) - d.balance)
+        : interestMin;
+      const saved = Math.max(0, interestMin - interestPill);
+      totalInterestMin += interestMin;
+      totalInterestPill += interestPill;
+      return { d, i, extra, newMonths, saved };
+    });
+
+    // Desktop table
+    tbody.innerHTML = rows.map(({d, i, extra, newMonths, saved}) => `<tr>
+        <td><span class="priority-badge ${pClasses[Math.min(i,2)]}">${i+1}</span></td>
+        <td>
+          <div style="font-weight:500">${d.name}</div>
+          <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em">${d.type}</div>
+        </td>
+        <td>${fmt(d.balance)}</td>
+        <td style="color:${colors[Math.min(i,2)]}">${d.apr.toFixed(2)}%</td>
+        <td>${fmt(d.minPayment)}</td>
+        <td style="color:var(--accent);font-weight:500">${extra > 0 ? '+' + fmt(extra) : '—'}</td>
+        <td>${newMonths < 999 ? newMonths + ' mo' : '—'}</td>
+        <td style="color:var(--pill-green)">${saved > 0 ? fmt(saved) : '—'}</td>
+      </tr>`).join('');
+
+    // Mobile stacked cards
+    const mobileCards = document.getElementById('strategy-cards');
+    mobileCards.innerHTML = rows.map(({d, i, extra, newMonths, saved}) => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="priority-badge ${pClasses[Math.min(i,2)]}">${i+1}</span>
+            <div>
+              <div style="font-weight:500;font-size:13px;">${d.name}</div>
+              <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em">${d.type}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:${colors[Math.min(i,2)]};font-size:15px;font-weight:500">${d.apr.toFixed(2)}% APR</div>
+            <div style="color:var(--muted);font-size:10px;">Balance: ${fmt(d.balance)}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div style="background:var(--surface);border-radius:6px;padding:8px;">
+            <div style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Min Pmt</div>
+            <div style="font-size:13px;">${fmt(d.minPayment)}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:8px;">
+            <div style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Extra PILL $</div>
+            <div style="font-size:13px;color:var(--accent)">${extra > 0 ? '+' + fmt(extra) : '—'}</div>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:8px;">
+            <div style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">New Payoff</div>
+            <div style="font-size:13px;">${newMonths < 999 ? newMonths + ' mo' : '—'}</div>
+          </div>
+        </div>
+        ${saved > 0 ? `<div style="margin-top:8px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.2);border-radius:6px;padding:8px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Est. Interest Saved</span>
+          <span style="color:var(--pill-green);font-size:15px;font-weight:500">${fmt(saved)}</span>
+        </div>` : ''}
+      </div>`).join('');
+
+    // Opportunity score
+    const score = totalInterestMin > 0 ? Math.min(100, (1 - totalInterestPill/totalInterestMin)*100) : 0;
+    document.getElementById('opp-bar').style.width = score.toFixed(0) + '%';
+    document.getElementById('opp-pct').textContent = score.toFixed(0) + '%';
+    document.getElementById('interest-min').textContent = fmt(totalInterestMin);
+    document.getElementById('interest-pill').textContent = fmt(totalInterestPill);
+    document.getElementById('interest-saved').textContent = fmt(totalInterestMin - totalInterestPill);
+
+    // Alerts
+    const alertZone = document.getElementById('alert-zone');
+    const alerts = [];
+    if (pool < 0) alerts.push(['warn', '⚠ Your outflows exceed income. Reduce expenses before applying prepayments.']);
+    if (pool > 0 && pool < 100) alerts.push(['warn', '💡 Your prepay pool is small — even $' + Math.round(pool) + '/mo applied to principal can meaningfully cancel interest over time.']);
+    if (debts.some(d => d.apr >= 18)) alerts.push(['info', '🎯 You have high-rate credit card debt. PILL recommends eliminating this first — it costs the most per dollar owed.']);
+    if (pool >= 500) alerts.push(['success', '✅ You have a healthy prepay pool. Concentrated application per the PILL method could save ' + fmt(totalInterestMin - totalInterestPill) + ' in interest.']);
+    alertZone.innerHTML = alerts.map(([type, msg]) => `<div class="alert alert-${type}">${msg}</div>`).join('');
+  }
+
+
+  // ---- BUILD ADVISOR ----
+  function buildAdvisor() {
+    const income = getVal('inc-primary') + getVal('inc-secondary') + getVal('inc-side') + getVal('inc-other');
+    const expenses = getVal('exp-grocery') + getVal('exp-utilities') + getVal('exp-insurance') +
+                     getVal('exp-subs') + getVal('exp-transport') + getVal('exp-dining') + getVal('exp-other');
+    const minPmts = debts.reduce((s,d) => s + d.minPayment, 0);
+    const pool = income - expenses - minPmts;
+    const prepayPool = Math.max(0, pool * 0.9);
+
+    // PILL priority: consumer debt first, then secured, mortgage last; within group sort by APR desc
+    const activeDebts = debts.filter(d => d.balance > 0 || d.minPayment > 0);
+    function pillPriorityAdv(d) {
+      if (d.type === 'credit') return 0;
+      if (d.name && d.name.toLowerCase().includes('heloc')) return 1;
+      if (d.type === 'car') return 2;
+      return 3;
+    }
+    const sorted = [...activeDebts].sort((a, b) => {
+      const pa = pillPriorityAdv(a), pb = pillPriorityAdv(b);
+      if (pa !== pb) return pa - pb;
+      return b.apr - a.apr;
+    });
+
+    function monthsToPayoff(balance, apr, payment) {
+      if (balance <= 0) return 0;
+      if (apr === 0) return payment > 0 ? Math.ceil(balance / payment) : 999;
+      const r = (apr/100)/12;
+      if (payment <= balance * r) return 999;
+      return Math.ceil(-Math.log(1-(balance*r)/payment)/Math.log(1+r));
+    }
+
+    function interestPaid(balance, apr, payment, months) {
+      if (balance <= 0 || months >= 999) return 0;
+      return Math.max(0, payment * months - balance);
+    }
+
+    // ---- ATTACK ORDER ----
+    const attackEl = document.getElementById('advisor-attack');
+    if (sorted.length === 0) {
+      attackEl.innerHTML = '<div class="alert alert-warn">Add your debts in the Debts tab first.</div>';
+    } else {
+      const top = sorted[0];
+      const topMonthsMin = monthsToPayoff(top.balance, top.apr, top.minPayment);
+      const topMonthsPill = monthsToPayoff(top.balance, top.apr, top.minPayment + prepayPool);
+      const topSaved = interestPaid(top.balance, top.apr, top.minPayment, topMonthsMin)
+                     - interestPaid(top.balance, top.apr, top.minPayment + prepayPool, topMonthsPill);
+
+      let html = '';
+
+      // Top recommendation banner
+      html += `<div style="background:rgba(200,240,96,0.07);border:1px solid rgba(200,240,96,0.25);border-radius:12px;padding:18px;margin-bottom:16px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:6px;">⚡ PILL Attack Target #1</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:8px;">${top.name}</div>
+        <div style="color:var(--muted);font-size:12px;line-height:1.7;">
+          At <strong style="color:var(--text)">${top.apr.toFixed(2)}% APR</strong>, this debt costs you the most per dollar. 
+          The PILL method says to concentrate your entire extra prepay pool here first.<br><br>
+          ${prepayPool > 0 ? `Adding <strong style="color:var(--accent)">${fmt(prepayPool)}/mo</strong> extra to this debt 
+          cuts payoff from <strong style="color:var(--text)">${topMonthsMin} months → ${topMonthsPill} months</strong>
+          ${topSaved > 0 ? ` and saves approximately <strong style="color:var(--pill-green)">${fmt(topSaved)}</strong> in interest.` : '.'}` 
+          : 'Once you free up cash flow, apply all extra money here first.'}
+        </div>
+      </div>`;
+
+      // Full ranked list
+      html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;">Full Attack Order</div>`;
+
+      // Build cascade extras for advisor display
+      // Each debt gets: prepayPool + ALL freed minimums from every debt paid off before it
+      let advisorFreed = 0;
+      const advisorExtras = sorted.map((d, i) => {
+        const extra = prepayPool + advisorFreed;  // always prepayPool + all freed so far
+        const m = monthsToPayoff(d.balance, d.apr, d.minPayment + extra);
+        if (m < 999 && d.minPayment > 0) advisorFreed += d.minPayment;
+        return extra;
+      });
+
+      sorted.forEach((d, i) => {
+        const isTop = i === 0;
+        const extra = advisorExtras[i];
+        const costPerMonth = ((d.apr/100)/12) * d.balance;
+        const barW = sorted[0].apr > 0 ? Math.round((d.apr / sorted[0].apr) * 100) : 0;
+        const colors = ['var(--accent)','var(--accent2)','var(--accent3)','var(--muted)'];
+        const color = colors[Math.min(i, 3)];
+        const mMin = monthsToPayoff(d.balance, d.apr, d.minPayment);
+        const mPill = monthsToPayoff(d.balance, d.apr, d.minPayment + extra);
+        const monthsSaved = (mMin < 999 && mPill < 999) ? mMin - mPill : 0;
+
+        html += `<div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:8px;${isTop?'border:1px solid rgba(200,240,96,0.3)':'border:1px solid var(--border)'}">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:${isTop?'var(--accent)':'var(--surface)'};border:1px solid ${color};color:${isTop?'var(--bg)':color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;">${i+1}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name}</div>
+              <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;">
+                <span style="font-size:10px;color:${color};">${d.apr.toFixed(2)}% APR</span>
+                <span style="font-size:10px;color:var(--muted);">${fmt(d.balance)} balance</span>
+                ${costPerMonth > 0 ? `<span style="font-size:10px;color:var(--danger);">~${fmt(costPerMonth)}/mo interest</span>` : ''}
+              </div>
+              <div style="margin-top:6px;background:var(--surface);border-radius:100px;height:4px;overflow:hidden;">
+                <div style="height:100%;width:${barW}%;background:${color};border-radius:100px;"></div>
+              </div>
+            </div>
+            ${isTop ? '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);flex-shrink:0;">Attack now</div>' : ''}
+          </div>
+          ${extra > 0 || i > 0 ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+            ${extra > 0 ? `<div style="background:rgba(200,240,96,0.08);border:1px solid rgba(200,240,96,0.2);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--accent);">
+              +${fmt(extra)}/mo total extra
+            </div>` : ''}
+            ${monthsSaved > 0 ? `<div style="background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--pill-green);">
+              Payoff: ${mPill} mo (saves ${monthsSaved} mo)
+            </div>` : ''}
+            ${i > 0 && extra > prepayPool ? `<div style="background:var(--surface);border-radius:6px;padding:5px 10px;font-size:10px;color:var(--muted);">
+              ${fmt(prepayPool)} prepay + ${fmt(extra - prepayPool)} freed minimums
+            </div>` : ''}
+          </div>` : ''}
+        </div>`;
+      });
+
+      // Why not snowball/avalanche
+      html += `<div style="margin-top:12px;padding:14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">Why Not Snowball or Avalanche?</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.7;">
+          The debt snowball pays smallest balance first (feels good, costs more). 
+          Avalanche pays highest APR first (better, but ignores amortization timing). 
+          The <strong style="color:var(--accent)">PILL method</strong> goes further — it targets the debt where each prepayment dollar cancels 
+          the <em>most future interest</em> based on where you are in the amortization schedule.
+        </div>
+      </div>`;
+
+      attackEl.innerHTML = html;
+    }
+
+    // ---- BONUS ALLOCATOR ----
+    const bonusAmount = getVal('bonus-amount');
+    const bonusReserve = getVal('bonus-reserve');
+    const deployable = Math.max(0, bonusAmount - bonusReserve);
+    const bonusEl = document.getElementById('advisor-bonus');
+
+    if (bonusAmount <= 0) {
+      bonusEl.innerHTML = '<div class="alert alert-info">Enter a bonus amount above to see the allocation plan.</div>';
+    } else {
+      let remaining = deployable;
+      let bonusHtml = '';
+
+      bonusHtml += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Total Bonus</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:20px;color:var(--accent)">${fmt(bonusAmount)}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Keep as Reserve</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:20px;color:var(--accent2)">${fmt(bonusReserve)}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Deploy to Debt</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:20px;color:var(--pill-green)">${fmt(deployable)}</div>
+        </div>
+      </div>`;
+
+      bonusHtml += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;">PILL Allocation Breakdown</div>`;
+
+      const bonusSorted = [...activeDebts].sort((a,b) => b.apr - a.apr);
+      let totalIntSaved = 0;
+
+      bonusSorted.forEach((d, i) => {
+        if (remaining <= 0) return;
+        // For PILL: pay off smallest-balance high-rate cards fully if we can, then apply rest to next
+        const alloc = Math.min(remaining, d.balance > 0 ? d.balance : 0);
+        if (alloc <= 0) return;
+        remaining -= alloc;
+
+        const monthsMin = monthsToPayoff(d.balance, d.apr, d.minPayment);
+        const newBal = d.balance - alloc;
+        const monthsAfter = newBal <= 0 ? 0 : monthsToPayoff(newBal, d.apr, d.minPayment);
+        const intBefore = interestPaid(d.balance, d.apr, d.minPayment, monthsMin);
+        const intAfter = newBal <= 0 ? 0 : interestPaid(newBal, d.apr, d.minPayment, monthsAfter);
+        const saved = Math.max(0, intBefore - intAfter);
+        totalIntSaved += saved;
+
+        const paidOff = newBal <= 0;
+        const colors2 = ['var(--accent)','var(--accent2)','var(--accent3)','var(--muted)'];
+
+        bonusHtml += `<div style="background:var(--surface2);border:1px solid ${paidOff ? 'rgba(76,175,125,0.4)' : 'var(--border)'};border-radius:10px;padding:14px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${d.name}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">${d.apr.toFixed(2)}% APR · Balance: ${fmt(d.balance)}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'DM Serif Display',serif;font-size:20px;color:var(--accent)">Apply ${fmt(alloc)}</div>
+              ${paidOff ? '<div style="font-size:10px;color:var(--pill-green);text-transform:uppercase;letter-spacing:.06em;">✓ Paid Off!</div>' 
+                        : `<div style="font-size:10px;color:var(--muted);">New balance: ${fmt(newBal)}</div>`}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${monthsMin > 0 ? `<div style="background:var(--surface);border-radius:6px;padding:6px 10px;font-size:11px;">
+              Before: <span style="color:var(--danger)">${monthsMin} mo payoff</span>
+            </div>` : ''}
+            ${monthsAfter >= 0 && monthsAfter < 999 ? `<div style="background:var(--surface);border-radius:6px;padding:6px 10px;font-size:11px;">
+              After: <span style="color:var(--pill-green)">${monthsAfter === 0 ? 'Eliminated!' : monthsAfter + ' mo payoff'}</span>
+            </div>` : ''}
+            ${saved > 0 ? `<div style="background:rgba(76,175,125,0.1);border-radius:6px;padding:6px 10px;font-size:11px;">
+              Saves: <span style="color:var(--pill-green)">${fmt(saved)} in interest</span>
+            </div>` : ''}
+          </div>
+        </div>`;
+      });
+
+      if (remaining > 0) {
+        bonusHtml += `<div style="background:rgba(200,240,96,0.07);border:1px solid rgba(200,240,96,0.2);border-radius:8px;padding:12px;margin-bottom:10px;">
+          <div style="font-size:12px;color:var(--accent);">💡 ${fmt(remaining)} remaining after all credit cards — apply to your HELOC or Subaru loan next, or invest.</div>
+        </div>`;
+      }
+
+      if (totalIntSaved > 0) {
+        bonusHtml += `<div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Total Estimated Interest Saved</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--pill-green)">${fmt(totalIntSaved)}</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);max-width:220px;line-height:1.6;">
+            By applying your ${fmt(bonusAmount)} bonus using the PILL method vs. minimum payments only.
+          </div>
+        </div>`;
+      }
+
+      bonusEl.innerHTML = bonusHtml;
+    }
+
+    // ---- TIMELINE ----
+    const timelineEl = document.getElementById('advisor-timeline');
+    // Build cascade extras map for timeline
+    const cascadeMap = new Map();
+    let tlFreed = 0;
+    sorted.forEach((d, i) => {
+      const extra = prepayPool + tlFreed;  // always prepayPool + all freed so far
+      cascadeMap.set(d.id, extra);
+      const m = monthsToPayoff(d.balance, d.apr, d.minPayment + extra);
+      if (m < 999 && d.minPayment > 0) tlFreed += d.minPayment;
+    });
+
+    const timelineSorted = [...activeDebts].sort((a,b) => {
+      const mA = monthsToPayoff(a.balance, a.apr, a.minPayment + (cascadeMap.get(a.id) || 0));
+      const mB = monthsToPayoff(b.balance, b.apr, b.minPayment + (cascadeMap.get(b.id) || 0));
+      return mA - mB;
+    });
+
+    const maxMonths = Math.max(...timelineSorted.map(d => {
+      const m = monthsToPayoff(d.balance, d.apr, d.minPayment);
+      return m < 999 ? m : 0;
+    }), 1);
+
+    let tlHtml = '';
+    timelineSorted.forEach(d => {
+      const mMin = monthsToPayoff(d.balance, d.apr, d.minPayment);
+      const mPill = monthsToPayoff(d.balance, d.apr, d.minPayment + (cascadeMap.get(d.id) || 0));
+      const barMin = mMin < 999 ? Math.round((mMin / maxMonths) * 100) : 100;
+      const barPill = mPill < 999 ? Math.round((mPill / maxMonths) * 100) : 100;
+      const yr = (m) => m < 999 ? (m >= 12 ? Math.floor(m/12) + 'y ' + (m%12) + 'm' : m + ' mo') : 'N/A';
+
+      tlHtml += `<div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:12px;font-weight:500;">${d.name}</span>
+          <span style="font-size:11px;color:var(--muted)">${fmt(d.balance)} · ${d.apr.toFixed(2)}%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <div style="width:60px;font-size:9px;color:var(--muted);text-transform:uppercase;flex-shrink:0;">Min only</div>
+          <div style="flex:1;background:var(--surface2);border-radius:100px;height:8px;overflow:hidden;">
+            <div style="width:${barMin}%;height:100%;background:var(--danger);border-radius:100px;opacity:0.6;"></div>
+          </div>
+          <div style="width:45px;font-size:11px;text-align:right;color:var(--danger)">${yr(mMin)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:60px;font-size:9px;color:var(--muted);text-transform:uppercase;flex-shrink:0;">w/ PILL</div>
+          <div style="flex:1;background:var(--surface2);border-radius:100px;height:8px;overflow:hidden;">
+            <div style="width:${barPill}%;height:100%;background:var(--pill-green);border-radius:100px;"></div>
+          </div>
+          <div style="width:45px;font-size:11px;text-align:right;color:var(--pill-green)">${yr(mPill)}</div>
+        </div>
+      </div>`;
+    });
+    timelineEl.innerHTML = tlHtml || '<div style="color:var(--muted);font-size:12px;">Enter debt details to see timeline.</div>';
+
+    // Populate PILL schedule selector
+    populatePillSelect();
+  }
+
+
+  // ========== ACCOUNTS TAB ==========
+  let bankAccounts = [];
+  let bankCounter = 0;
+
+  const ACCT_KEYS = ['ef-target','ef-current','env-balance','env-apy','env-contrib','acct-bonus','acct-personal-reserve'];
+
+  function saveAccounts() {
+    try {
+      ACCT_KEYS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) localStorage.setItem('pill_' + id, el.value);
+      });
+      localStorage.setItem('pill_bankAccounts', JSON.stringify(bankAccounts));
+      localStorage.setItem('pill_bankCounter', bankCounter);
+      // sync cc live balances back to debts
+      debts.forEach(d => {
+        const el = document.getElementById('cc-live-' + d.id);
+        if (el && el.value !== '') {
+          d.balance = parseFloat(el.value) || d.balance;
+          localStorage.setItem('pill_cc_live_' + d.id, el.value);
+        }
+      });
+      saveInputs();
+    } catch(e) {}
+  }
+
+  function loadAccounts() {
+    try {
+      ACCT_KEYS.forEach(id => {
+        const val = localStorage.getItem('pill_' + id);
+        const el = document.getElementById(id);
+        if (val !== null && el) el.value = val;
+      });
+      const saved = localStorage.getItem('pill_bankAccounts');
+      if (saved) {
+        bankAccounts = JSON.parse(saved);
+        bankCounter = parseInt(localStorage.getItem('pill_bankCounter')) || bankAccounts.length;
+      }
+    } catch(e) {}
+  }
+
+  function addBankAccount() {
+    const id = ++bankCounter;
+    bankAccounts.push({ id, name: 'Checking Account', balance: 0 });
+    renderBankAccounts();
+    saveAccounts();
+  }
+
+  function removeBankAccount(id) {
+    bankAccounts = bankAccounts.filter(a => a.id !== id);
+    renderBankAccounts();
+    buildAccounts();
+    saveAccounts();
+  }
+
+  function updateBankAccount(id, field, val) {
+    const a = bankAccounts.find(a => a.id === id);
+    if (a) {
+      a[field] = field === 'balance' ? (parseFloat(val) || 0) : val;
+      buildAccounts();
+      saveAccounts();
+    }
+  }
+
+  function renderBankAccounts() {
+    const el = document.getElementById('bank-list');
+    if (!el) return;
+    if (bankAccounts.length === 0) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">No accounts added yet.</div>';
+      return;
+    }
+    el.innerHTML = bankAccounts.map(a => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="text" value="${a.name}" onchange="updateBankAccount(${a.id},'name',this.value)"
+          style="flex:1;min-width:140px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
+        <div class="input-prefix" style="flex:1;min-width:120px;"><span>$</span>
+          <input type="number" value="${a.balance||''}" placeholder="0"
+            oninput="updateBankAccount(${a.id},'balance',this.value)"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px 9px 24px;color:var(--text);font-family:'DM Mono',monospace;font-size:16px;outline:none;">
+        </div>
+        <button onclick="removeBankAccount(${a.id})" class="remove-btn">×</button>
+      </div>
+    `).join('');
+  }
+
+  function fmt2(n, digits=0) {
+    if (isNaN(n)) return '$0';
+    return '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+  }
+
+  function buildAccounts() {
+    renderBankAccounts();
+
+    const efTarget  = parseFloat(document.getElementById('ef-target')?.value) || 0;
+    const efCurrent = parseFloat(document.getElementById('ef-current')?.value) || 0;
+    const envBal    = parseFloat(document.getElementById('env-balance')?.value) || 0;
+    const envApy    = parseFloat(document.getElementById('env-apy')?.value) || 4.5;
+    const envContrib= parseFloat(document.getElementById('env-contrib')?.value) || 0;
+    const bonusAmt  = parseFloat(document.getElementById('acct-bonus')?.value) || 0;
+    const personalRes=parseFloat(document.getElementById('acct-personal-reserve')?.value) || 0;
+
+    // ---- EMERGENCY FUND ----
+    const efEl = document.getElementById('ef-display');
+    if (efEl) {
+      const efGap = Math.max(0, efTarget - efCurrent);
+      const efPct = efTarget > 0 ? Math.min(100, (efCurrent/efTarget)*100) : 0;
+      const efColor = efPct >= 100 ? 'var(--pill-green)' : efPct >= 50 ? 'var(--accent2)' : 'var(--danger)';
+      const months2Fill = envContrib > 0 && efGap > 0 ? Math.ceil(efGap / envContrib) : null;
+      efEl.innerHTML = `
+        <div style="margin-bottom:8px;display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--muted);">${fmt2(efCurrent)} saved of ${fmt2(efTarget)} target</span>
+          <span style="color:${efColor};font-weight:600;">${efPct.toFixed(0)}%</span>
+        </div>
+        <div style="background:var(--surface2);border-radius:100px;height:12px;overflow:hidden;margin-bottom:10px;">
+          <div style="width:${efPct}%;height:100%;background:${efColor};border-radius:100px;transition:width .4s;"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${efGap > 0 ? `<div style="background:var(--surface2);border-radius:6px;padding:7px 12px;font-size:11px;">Still need: <span style="color:var(--danger)">${fmt2(efGap)}</span></div>` : '<div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:6px;padding:7px 12px;font-size:11px;color:var(--pill-green);">✓ Emergency fund fully funded!</div>'}
+          ${months2Fill ? `<div style="background:var(--surface2);border-radius:6px;padding:7px 12px;font-size:11px;color:var(--muted);">~${months2Fill} months to fill at current contributions</div>` : ''}
+        </div>`;
+    }
+
+    // ---- ENVELOPE SAVINGS ----
+    const envEl = document.getElementById('env-display');
+    if (envEl) {
+      const monthlyInterest = envBal * (envApy / 100) / 12;
+      const yr1 = envBal * Math.pow(1 + envApy/100/12, 12) + envContrib * ((Math.pow(1+envApy/100/12,12)-1)/(envApy/100/12));
+      const yr3 = envBal * Math.pow(1 + envApy/100/12, 36) + envContrib * ((Math.pow(1+envApy/100/12,36)-1)/(envApy/100/12));
+      const yr5 = envBal * Math.pow(1 + envApy/100/12, 60) + envContrib * ((Math.pow(1+envApy/100/12,60)-1)/(envApy/100/12));
+      envEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;flex-wrap:wrap;">
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Monthly Interest</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--pill-green);">${fmt2(monthlyInterest, 2)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">1 Year</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--accent);">${fmt2(yr1)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">3 Years</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--accent);">${fmt2(yr3)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">5 Years</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--accent);">${fmt2(yr5)}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding:10px 14px;background:rgba(200,240,96,0.06);border:1px solid rgba(200,240,96,0.15);border-radius:8px;font-size:12px;color:var(--muted);">
+          At <strong style="color:var(--accent)">${envApy}% APY</strong>, your Envelope account earns 
+          <strong style="color:var(--pill-green)">${fmt2(monthlyInterest,2)}/mo</strong> in interest on your current balance — 
+          that's money working for you while you sleep.
+        </div>`;
+    }
+
+    // ---- CC LIVE BALANCES ----
+    const ccEl = document.getElementById('cc-live-list');
+    if (ccEl) {
+      const ccDebts = debts.filter(d => d.type === 'credit');
+      if (ccDebts.length === 0) {
+        ccEl.innerHTML = '<div style="color:var(--muted);font-size:12px;">Add credit cards in the Debts tab first.</div>';
+      } else {
+        ccEl.innerHTML = ccDebts.map(d => {
+          const savedLive = localStorage.getItem('pill_cc_live_' + d.id);
+          const liveVal = savedLive !== null ? savedLive : (d.balance || '');
+          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;font-size:13px;font-weight:500;">${d.name}
+              <div style="font-size:10px;color:var(--muted);">${d.apr}% APR · Original: ${fmt2(d.balance)}</div>
+            </div>
+            <div class="input-prefix" style="flex:1;min-width:120px;"><span>$</span>
+              <input type="number" id="cc-live-${d.id}" value="${liveVal}" placeholder="${d.balance}"
+                oninput="saveAccounts();buildAccounts();"
+                style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px 9px 24px;color:var(--accent2);font-family:'DM Mono',monospace;font-size:16px;outline:none;">
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // ---- NET WORTH ----
+    const nwEl = document.getElementById('networth-display');
+    if (nwEl) {
+      const bankTotal = bankAccounts.reduce((s,a) => s + a.balance, 0);
+      const savings = envBal + efCurrent;
+      const totalAssets = bankTotal + savings;
+
+      // Get live CC balances if entered, else use debt balances
+      const ccLiveTotal = debts.filter(d => d.type === 'credit').reduce((s,d) => {
+        const el = document.getElementById('cc-live-' + d.id);
+        return s + (el && el.value !== '' ? (parseFloat(el.value)||0) : d.balance);
+      }, 0);
+      const loanTotal = debts.filter(d => d.type !== 'credit').reduce((s,d) => s + d.balance, 0);
+      const totalLiabilities = ccLiveTotal + loanTotal;
+      const netWorth = totalAssets - totalLiabilities;
+      const nwColor = netWorth >= 0 ? 'var(--pill-green)' : 'var(--danger)';
+
+      nwEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div style="background:var(--surface2);border-radius:8px;padding:14px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">Total Assets</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--pill-green);">${fmt2(totalAssets)}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;">Bank: ${fmt2(bankTotal)}<br>Savings: ${fmt2(savings)}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:14px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">Total Liabilities</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--danger);">${fmt2(totalLiabilities)}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;">Credit Cards: ${fmt2(ccLiveTotal)}<br>Loans: ${fmt2(loanTotal)}</div>
+          </div>
+          <div style="background:var(--surface2);border:2px solid ${nwColor}33;border-radius:8px;padding:14px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">Net Worth</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:22px;color:${nwColor};">${netWorth < 0 ? '-' : ''}${fmt2(netWorth)}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;">${netWorth >= 0 ? 'Assets exceed debt ✓' : 'Keep attacking debt!'}</div>
+          </div>
+        </div>`;
+    }
+
+    // ---- SMART BONUS ALLOCATOR ----
+    const sbEl = document.getElementById('smart-bonus-display');
+    if (sbEl && bonusAmt > 0) {
+      let remaining = bonusAmt - personalRes;
+      let breakdown = [];
+
+      // Step 1: Fill emergency fund gap first
+      const efGap = Math.max(0, efTarget - efCurrent);
+      if (efGap > 0 && remaining > 0) {
+        const alloc = Math.min(efGap, remaining);
+        remaining -= alloc;
+        breakdown.push({ label: '🛡 Emergency Fund (fill to target)', amount: alloc, color: 'var(--accent3)', note: `Brings fund to ${fmt2(Math.min(efCurrent + alloc, efTarget))} of ${fmt2(efTarget)} target` });
+      }
+
+      // Step 2: Apply rest to debts in PILL order
+      const pillSorted = [...debts.filter(d => d.balance > 0)].sort((a,b) => {
+        const pa = (a.type==='credit'?0:a.name?.toLowerCase().includes('heloc')?1:a.type==='car'?2:3);
+        const pb = (b.type==='credit'?0:b.name?.toLowerCase().includes('heloc')?1:b.type==='car'?2:3);
+        if (pa!==pb) return pa-pb; return b.apr-a.apr;
+      });
+      pillSorted.forEach(d => {
+        if (remaining <= 0) return;
+        const liveBal = (() => { const el = document.getElementById('cc-live-' + d.id); return el && el.value !== '' ? (parseFloat(el.value)||d.balance) : d.balance; })();
+        const alloc = Math.min(remaining, liveBal);
+        if (alloc <= 0) return;
+        remaining -= alloc;
+        const paidOff = alloc >= liveBal;
+        breakdown.push({ label: d.name, amount: alloc, color: 'var(--accent)', note: paidOff ? '✓ Fully paid off!' : `New balance: ${fmt2(liveBal - alloc)}`, apr: d.apr });
+      });
+
+      if (remaining > 0) breakdown.push({ label: '💡 Remaining — invest or add to savings', amount: remaining, color: 'var(--pill-green)', note: 'Consider index funds or HYSA' });
+
+      let html = `<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-size:11px;">Bonus: <strong style="color:var(--accent)">${fmt2(bonusAmt)}</strong></div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-size:11px;">Keep liquid: <strong style="color:var(--accent2)">${fmt2(personalRes)}</strong></div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-size:11px;">Deploy: <strong style="color:var(--pill-green)">${fmt2(bonusAmt - personalRes)}</strong></div>
+      </div>`;
+
+      breakdown.forEach((item, i) => {
+        html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-size:13px;font-weight:500;">${item.label}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">${item.note}${item.apr ? ' · ' + item.apr + '% APR' : ''}</div>
+          </div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:${item.color};">${fmt2(item.amount)}</div>
+        </div>`;
+      });
+
+      sbEl.innerHTML = html;
+    } else if (sbEl) {
+      sbEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Enter a bonus amount above to see allocation.</div>';
+    }
+  }
+
+
+  // ========== TRUE PILL AMORTIZATION SCHEDULE ==========
+  function populatePillSelect() {
+    const sel = document.getElementById('pill-schedule-select');
+    if (!sel) return;
+    const eligible = debts.filter(d => d.balance > 0 && d.apr > 0 && d.minPayment > 0);
+    sel.innerHTML = eligible.length === 0
+      ? '<option>No eligible debts — enter balance, APR and payment</option>'
+      : eligible.map(d => `<option value="${d.id}">${d.name} — ${d.apr}% APR — ${fmt(d.balance)} balance</option>`).join('');
+    buildPillSchedule();
+  }
+
+  function buildPillSchedule() {
+    const sel = document.getElementById('pill-schedule-select');
+    const el  = document.getElementById('pill-schedule-display');
+    if (!sel || !el) return;
+
+    const debtId = parseInt(sel.value);
+    const d = debts.find(x => x.id === debtId);
+    if (!d || d.balance <= 0 || d.apr <= 0) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:12px;">Select a debt with balance and APR filled in.</div>';
+      return;
+    }
+
+    const r = (d.apr / 100) / 12;   // monthly rate
+    const P = d.balance;
+    const pmt = d.minPayment;
+
+    // Build full amortization for first 24 payments
+    let bal = P;
+    let rows = [];
+    for (let i = 1; i <= Math.min(d.months || 360, 24); i++) {
+      const interest = bal * r;
+      const principal = Math.max(0, pmt - interest);
+      const nextBal = Math.max(0, bal - principal);
+
+      // PILL insight: the NEXT payment's interest charge is what we can cancel by prepaying now.
+      // Prepaying one extra principal unit now saves exactly r * (that amount) next month,
+      // and compounds forward. The "power" of a prepayment = interest on the next scheduled principal.
+      // We show: if you add the NEXT row's principal as an extra payment THIS month,
+      // you skip that future payment entirely.
+      const nextInterest = nextBal * r;
+      const nextPrincipal = Math.max(0, pmt - nextInterest);
+      const cancelRatio = nextPrincipal > 0 ? (nextInterest / nextPrincipal) : 0;
+
+      rows.push({
+        num: i,
+        interest: interest,
+        principal: principal,
+        balance: nextBal,
+        // Extra to pay = next period's principal (skips a whole future payment)
+        extraToCancel: nextPrincipal,
+        interestCancelled: nextInterest,
+        cancelRatio: cancelRatio
+      });
+
+      bal = nextBal;
+      if (bal <= 0) break;
+    }
+
+    // Highlight the highest-ratio rows (best PILL opportunities)
+    const maxRatio = Math.max(...rows.map(r => r.cancelRatio));
+
+    let html = `
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        <strong style="color:var(--text);">How to read this:</strong> For each upcoming payment, 
+        the <span style="color:var(--accent)">Extra Principal</span> column shows how much extra to send 
+        <em>with that payment</em>. Doing so skips the next scheduled payment entirely and cancels that 
+        interest charge. The <span style="color:var(--pill-green)">Interest Cancelled</span> column shows 
+        exactly what you save. Rows highlighted in green are your highest-leverage PILL opportunities.
+      </div>
+      <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:500px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Pmt #</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Interest Portion</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Principal Portion</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Remaining Bal</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:8px 8px;border-bottom:1px solid var(--border);">Extra Principal</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--pill-green);padding:8px 8px;border-bottom:1px solid var(--border);">Int. Cancelled</th>
+            <th style="text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Leverage</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+    rows.forEach(row => {
+      const isHighlight = row.cancelRatio >= maxRatio * 0.85;
+      const leveragePct = maxRatio > 0 ? Math.round((row.cancelRatio / maxRatio) * 100) : 0;
+      const barColor = leveragePct >= 85 ? 'var(--pill-green)' : leveragePct >= 60 ? 'var(--accent2)' : 'var(--muted)';
+      html += `<tr style="${isHighlight ? 'background:rgba(76,175,125,0.05);' : ''}">
+        <td style="padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;">
+          ${isHighlight ? '<span style="color:var(--pill-green);font-weight:600;">▶ </span>' : ''}${row.num}
+        </td>
+        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--danger);">${fmt2(row.interest,2)}</td>
+        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;">${fmt2(row.principal,2)}</td>
+        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--muted);">${fmt2(row.balance,0)}</td>
+        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--accent);font-weight:600;">+${fmt2(row.extraToCancel,2)}</td>
+        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--pill-green);font-weight:600;">${fmt2(row.interestCancelled,2)}</td>
+        <td style="padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);">
+          <div style="background:var(--surface2);border-radius:100px;height:6px;overflow:hidden;width:60px;margin-left:auto;">
+            <div style="width:${leveragePct}%;height:100%;background:${barColor};border-radius:100px;"></div>
+          </div>
+        </td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div>
+      <div style="margin-top:12px;padding:12px 14px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.7;">
+        <strong style="color:var(--accent)">▶ Green rows</strong> = highest-leverage PILL moments. 
+        Sending the extra principal amount <em>with</em> that exact payment cancels the most interest per dollar spent. 
+        Contact your lender and specify <strong style="color:var(--text)">"apply to principal only"</strong> when making extra payments.
+      </div>`;
+
+    el.innerHTML = html;
+  }
+
+  function printPlan() { window.print(); }
+
+  // ---- PRE-LOAD USER DATA ----
+  function loadDefaults() {
+    // INCOME
+    document.getElementById('inc-primary').value  = 7380.88;
+    document.getElementById('inc-secondary').value = 1200;
+    document.getElementById('inc-side').value      = 300;
+    document.getElementById('inc-other').value     = 2100;
+    // EXPENSES
+    document.getElementById('exp-insurance').value  = 514;
+    document.getElementById('exp-subs').value       = 81.58;
+    document.getElementById('exp-utilities').value  = 266.67;
+    document.getElementById('exp-grocery').value    = 140;
+    document.getElementById('exp-dining').value     = 1662.91;
+    document.getElementById('exp-transport').value  = 0;
+    document.getElementById('exp-other').value      = 0;
+    // DEBTS
+    debts = [];
+    debtCounter = 0;
+    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'Mortgage – Carter Bank', balance: 0, apr: 6.5, minPayment: 5700.21, months: 300 });
+    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'HELOC – ACFCU', balance: 0, apr: 8.5, minPayment: 800, months: 120 });
+    debts.push({ id: ++debtCounter, type: 'car', name: 'Solar Loan – Service Financials', balance: 0, apr: 5.99, minPayment: 485.82, months: 84 });
+    debts.push({ id: ++debtCounter, type: 'car', name: 'Subaru – ACFCU', balance: 0, apr: 6.9, minPayment: 296, months: 48 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Gemini Card', balance: 2938.81, apr: 24.99, minPayment: 139, months: 24 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover Miles', balance: 3179.28, apr: 22.99, minPayment: 80, months: 48 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Bank of America', balance: 2179.70, apr: 21.99, minPayment: 168, months: 18 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Apple Card', balance: 1487.86, apr: 19.99, minPayment: 122, months: 15 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Amazon Store Card', balance: 447.97, apr: 29.99, minPayment: 51, months: 12 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays Card', balance: 454.34, apr: 20.99, minPayment: 74, months: 8 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'American Express', balance: 0, apr: 18.99, minPayment: 95, months: 12 });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const hasSaved = loadSavedInputs();
+    if (!hasSaved) {
+      loadDefaults();
+    }
+    renderDebts();
+    recalc();
+    loadAccounts();
+
+    // Show save indicator briefly
+    const indicator = document.getElementById('save-indicator');
+    if (hasSaved && indicator) {
+      indicator.textContent = '✓ Your data was restored';
+      indicator.style.color = 'var(--pill-green)';
+      setTimeout(() => { indicator.textContent = ''; }, 3000);
+    }
+  });
+</script>
+</body>
+</html>

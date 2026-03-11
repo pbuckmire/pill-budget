@@ -564,6 +564,7 @@
     <button class="tab" onclick="switchTab('strategy')">③ PILL Strategy</button>
     <button class="tab" onclick="switchTab('advisor')">④ Advisor</button>
     <button class="tab" onclick="switchTab('accounts')">⑤ Accounts</button>
+    <button class="tab" onclick="switchTab('log')">⑥ Payment Log</button>
   </div>
 
   <!-- ===== PANEL 1: INCOME & EXPENSES ===== -->
@@ -944,6 +945,121 @@
     </div>
   </div>
 
+
+  <!-- ===== PANEL 6: PAYMENT LOG ===== -->
+  <div class="panel" id="panel-log">
+
+    <!-- SUMMARY STATS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;" id="log-summary-grid">
+      <div class="stat-block">
+        <div class="stat-label">Total Paid to Date</div>
+        <div class="stat-value green" id="log-total-paid">$0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Total Interest Paid</div>
+        <div class="stat-value red" id="log-total-interest">$0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Total Principal Knocked Off</div>
+        <div class="stat-value yellow" id="log-total-principal">$0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Months Ahead of Schedule</div>
+        <div class="stat-value blue" id="log-months-ahead">0</div>
+        <div class="stat-note">From extra PILL prepayments</div>
+      </div>
+    </div>
+
+    <!-- LOG NEW PAYMENT -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">➕ Log a Payment</div>
+      <div class="card-sub">Record each payment as you make it</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div class="field" style="margin:0;">
+          <label>Debt</label>
+          <select id="log-debt-select"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
+          </select>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Payment Date</label>
+          <input type="date" id="log-date"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div class="field" style="margin:0;">
+          <label>Total Amount Paid</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="log-amount" placeholder="0.00" style="font-size:16px;">
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Principal Portion</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="log-principal" placeholder="0.00" style="font-size:16px;">
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Interest Portion</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="log-interest" placeholder="0.00" style="font-size:16px;">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div class="field" style="margin:0;">
+          <label>Extra PILL Prepayment</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="log-extra" placeholder="0.00" style="font-size:16px;">
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Remaining Balance After</label>
+          <div class="input-prefix"><span>$</span>
+            <input type="number" id="log-balance" placeholder="0.00" style="font-size:16px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>Notes</label>
+        <input type="text" id="log-notes" placeholder="e.g. Extra PILL payment applied to principal"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
+      </div>
+
+      <button class="btn btn-primary" onclick="addPaymentLog()">+ Log Payment</button>
+    </div>
+
+    <!-- VIEW TOGGLE -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+      <div class="tabs" style="margin-bottom:0;">
+        <button class="tab active" id="view-all-btn" onclick="setLogView('all')">All Payments</button>
+        <button class="tab" id="view-debt-btn" onclick="setLogView('debt')">By Debt</button>
+      </div>
+      <div id="log-debt-filter-wrap" style="display:none;flex:1;min-width:160px;">
+        <select id="log-filter-debt"
+          onchange="buildLog()"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
+        </select>
+      </div>
+    </div>
+
+    <!-- LOG TABLE -->
+    <div class="card" style="margin-bottom:16px;">
+      <div id="log-table-wrap"></div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="switchTab('accounts')">← Back</button>
+      <button class="btn btn-outline" style="color:var(--danger);border-color:var(--danger);" onclick="clearAllLogs()">🗑 Clear All Logs</button>
+      <button class="btn btn-primary" onclick="printPlan()">🖨 Print</button>
+    </div>
+  </div>
+
 </div><!-- /app -->
 
 <script>
@@ -953,13 +1069,14 @@
   // ---- TAB NAVIGATION ----
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach((t,i) => {
-      t.classList.toggle('active', ['income','debts','strategy','advisor','accounts'][i] === name);
+      t.classList.toggle('active', ['income','debts','strategy','advisor','accounts','log'][i] === name);
     });
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-' + name).classList.add('active');
     if (name === 'strategy') buildStrategy();
     if (name === 'advisor') buildAdvisor();
     if (name === 'accounts') buildAccounts();
+    if (name === 'log') buildLog();
   }
 
   // ---- HELPERS ----
@@ -1964,6 +2081,239 @@
     el.innerHTML = html;
   }
 
+
+  // ========== PAYMENT LOG ==========
+  let paymentLog = [];
+  let logView = 'all'; // 'all' or 'debt'
+
+  function setLogView(v) {
+    logView = v;
+    document.getElementById('view-all-btn').classList.toggle('active', v === 'all');
+    document.getElementById('view-debt-btn').classList.toggle('active', v === 'debt');
+    document.getElementById('log-debt-filter-wrap').style.display = v === 'debt' ? 'block' : 'none';
+    buildLog();
+  }
+
+  function saveLog() {
+    try { localStorage.setItem('pill_paymentLog', JSON.stringify(paymentLog)); } catch(e) {}
+  }
+
+  function loadLog() {
+    try {
+      const saved = localStorage.getItem('pill_paymentLog');
+      if (saved) paymentLog = JSON.parse(saved);
+    } catch(e) {}
+  }
+
+  function populateLogDebtSelect() {
+    const sel = document.getElementById('log-debt-select');
+    const fil = document.getElementById('log-filter-debt');
+    if (!sel) return;
+    const opts = debts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    sel.innerHTML = opts;
+    if (fil) fil.innerHTML = '<option value="all">All Debts</option>' + opts;
+  }
+
+  function addPaymentLog() {
+    const debtId  = parseInt(document.getElementById('log-debt-select').value);
+    const date    = document.getElementById('log-date').value;
+    const amount  = parseFloat(document.getElementById('log-amount').value) || 0;
+    const principal = parseFloat(document.getElementById('log-principal').value) || 0;
+    const interest  = parseFloat(document.getElementById('log-interest').value) || 0;
+    const extra   = parseFloat(document.getElementById('log-extra').value) || 0;
+    const balance = parseFloat(document.getElementById('log-balance').value) || 0;
+    const notes   = document.getElementById('log-notes').value || '';
+
+    if (!date || amount <= 0) {
+      alert('Please enter at least a date and amount paid.');
+      return;
+    }
+
+    const debt = debts.find(d => d.id === debtId);
+    paymentLog.push({
+      id: Date.now(),
+      debtId,
+      debtName: debt ? debt.name : 'Unknown',
+      date,
+      amount,
+      principal,
+      interest,
+      extra,
+      balance,
+      notes
+    });
+
+    // Sort by date desc
+    paymentLog.sort((a,b) => new Date(b.date) - new Date(a.date));
+    saveLog();
+
+    // Clear form
+    ['log-amount','log-principal','log-interest','log-extra','log-balance','log-notes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+    buildLog();
+
+    // Show confirmation flash
+    const btn = document.querySelector('[onclick="addPaymentLog()"]');
+    if (btn) {
+      btn.textContent = '✓ Logged!';
+      btn.style.background = 'var(--pill-green)';
+      setTimeout(() => { btn.textContent = '+ Log Payment'; btn.style.background = ''; }, 2000);
+    }
+  }
+
+  function deleteLogEntry(id) {
+    paymentLog = paymentLog.filter(p => p.id !== id);
+    saveLog();
+    buildLog();
+  }
+
+  function clearAllLogs() {
+    if (confirm('Clear all payment history? This cannot be undone.')) {
+      paymentLog = [];
+      saveLog();
+      buildLog();
+    }
+  }
+
+  function buildLog() {
+    populateLogDebtSelect();
+
+    // Set today's date on date field if empty
+    const dateEl = document.getElementById('log-date');
+    if (dateEl && !dateEl.value) {
+      dateEl.value = new Date().toISOString().split('T')[0];
+    }
+
+    // ---- SUMMARY STATS ----
+    const totalPaid      = paymentLog.reduce((s,p) => s + p.amount, 0);
+    const totalInterest  = paymentLog.reduce((s,p) => s + p.interest, 0);
+    const totalPrincipal = paymentLog.reduce((s,p) => s + p.principal, 0);
+    const totalExtra     = paymentLog.reduce((s,p) => s + p.extra, 0);
+
+    // Months ahead: estimate based on total extra prepayments vs average monthly payment
+    const avgMinPayment = debts.reduce((s,d) => s + d.minPayment, 0);
+    const monthsAhead = avgMinPayment > 0 ? Math.floor(totalExtra / avgMinPayment) : 0;
+
+    document.getElementById('log-total-paid').textContent      = fmt(totalPaid);
+    document.getElementById('log-total-interest').textContent  = fmt(totalInterest);
+    document.getElementById('log-total-principal').textContent = fmt(totalPrincipal);
+    document.getElementById('log-months-ahead').textContent    = monthsAhead;
+
+    // ---- FILTER ----
+    let filtered = [...paymentLog];
+    if (logView === 'debt') {
+      const fil = document.getElementById('log-filter-debt');
+      const val = fil ? fil.value : 'all';
+      if (val !== 'all') filtered = filtered.filter(p => p.debtId === parseInt(val));
+    }
+
+    // ---- TABLE ----
+    const wrap = document.getElementById('log-table-wrap');
+    if (!wrap) return;
+
+    if (paymentLog.length === 0) {
+      wrap.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted);">
+        <div style="font-size:40px;margin-bottom:12px;">📋</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:6px;">No payments logged yet</div>
+        <div style="font-size:12px;">Use the form above to record your first payment</div>
+      </div>`;
+      return;
+    }
+
+    if (filtered.length === 0) {
+      wrap.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px 0;text-align:center;">No payments for this debt yet.</div>';
+      return;
+    }
+
+    // Group by debt for "by debt" view
+    if (logView === 'debt') {
+      const fil = document.getElementById('log-filter-debt');
+      const val = fil ? fil.value : 'all';
+
+      // Per-debt summary
+      const debtTotalPaid     = filtered.reduce((s,p) => s + p.amount, 0);
+      const debtTotalInt      = filtered.reduce((s,p) => s + p.interest, 0);
+      const debtTotalPrin     = filtered.reduce((s,p) => s + p.principal, 0);
+      const debtTotalExtra    = filtered.reduce((s,p) => s + p.extra, 0);
+      const latestBal         = filtered[0]?.balance || 0;
+      const debtName          = filtered[0]?.debtName || '';
+
+      wrap.innerHTML = `
+        <div style="margin-bottom:16px;">
+          <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:12px;">${val === 'all' ? 'All Debts' : debtName}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">Total Paid</div>
+              <div style="font-size:18px;font-family:'DM Serif Display',serif;color:var(--accent)">${fmt(debtTotalPaid)}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">Interest Paid</div>
+              <div style="font-size:18px;font-family:'DM Serif Display',serif;color:var(--danger)">${fmt(debtTotalInt)}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">Principal Paid</div>
+              <div style="font-size:18px;font-family:'DM Serif Display',serif;color:var(--pill-green)">${fmt(debtTotalPrin)}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">Extra PILL Paid</div>
+              <div style="font-size:18px;font-family:'DM Serif Display',serif;color:var(--accent2)">${fmt(debtTotalExtra)}</div>
+            </div>
+          </div>
+          ${latestBal > 0 ? `<div style="background:rgba(200,240,96,0.07);border:1px solid rgba(200,240,96,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);">
+            Current remaining balance: <strong style="color:var(--accent)">${fmt(latestBal)}</strong>
+          </div>` : ''}
+        </div>
+        ${renderLogTable(filtered)}`;
+    } else {
+      wrap.innerHTML = renderLogTable(filtered);
+    }
+  }
+
+  function renderLogTable(entries) {
+    return `
+      <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:560px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--border);">Date</th>
+            <th style="text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--border);">Debt</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--border);">Amount</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--border);">Principal</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--danger);padding:8px;border-bottom:1px solid var(--border);">Interest</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:8px;border-bottom:1px solid var(--border);">Extra PILL</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--border);">Bal. After</th>
+            <th style="text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--border);">Notes</th>
+            <th style="padding:8px;border-bottom:1px solid var(--border);"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${entries.map(p => `<tr style="border-bottom:1px solid rgba(42,43,39,0.5);">
+            <td style="padding:10px 8px;font-size:12px;white-space:nowrap;">${formatDate(p.date)}</td>
+            <td style="padding:10px 8px;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.debtName}</td>
+            <td style="padding:10px 8px;font-size:12px;text-align:right;font-weight:600;">${fmt(p.amount)}</td>
+            <td style="padding:10px 8px;font-size:12px;text-align:right;color:var(--pill-green);">${p.principal > 0 ? fmt(p.principal) : '—'}</td>
+            <td style="padding:10px 8px;font-size:12px;text-align:right;color:var(--danger);">${p.interest > 0 ? fmt(p.interest) : '—'}</td>
+            <td style="padding:10px 8px;font-size:12px;text-align:right;color:var(--accent);font-weight:600;">${p.extra > 0 ? '+' + fmt(p.extra) : '—'}</td>
+            <td style="padding:10px 8px;font-size:12px;text-align:right;color:var(--muted);">${p.balance > 0 ? fmt(p.balance) : '—'}</td>
+            <td style="padding:10px 8px;font-size:11px;color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.notes || '—'}</td>
+            <td style="padding:10px 8px;text-align:center;">
+              <button onclick="deleteLogEntry(${p.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;" title="Delete">×</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      </div>`;
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
   function printPlan() { window.print(); }
 
   // ---- PRE-LOAD USER DATA ----
@@ -2005,6 +2355,7 @@
     renderDebts();
     recalc();
     loadAccounts();
+    loadLog();
 
     // Show save indicator briefly
     const indicator = document.getElementById('save-indicator');

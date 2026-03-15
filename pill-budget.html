@@ -918,6 +918,13 @@
       <div id="networth-display"></div>
     </div>
 
+    <!-- UPCOMING ANNUAL FEES -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">📅 Upcoming Annual Fees</div>
+      <div class="card-sub">One-time yearly charges to plan for</div>
+      <div id="annual-fees-display"></div>
+    </div>
+
     <!-- BONUS ALLOCATION WITH EMERGENCY FUND -->
     <div class="card" style="margin-bottom:16px;">
       <div class="card-title">💰 Smart Bonus Allocator</div>
@@ -1402,6 +1409,8 @@
     if (pool < 0) alerts.push(['warn', '⚠ Your outflows exceed income. Reduce expenses before applying prepayments.']);
     if (pool > 0 && pool < 100) alerts.push(['warn', '💡 Your prepay pool is small — even $' + Math.round(pool) + '/mo applied to principal can meaningfully cancel interest over time.']);
     if (debts.some(d => d.apr >= 18)) alerts.push(['info', '🎯 You have high-rate credit card debt. PILL recommends eliminating this first — it costs the most per dollar owed.']);
+    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC: You are paying $900/mo — $679.09 interest + $220.91 directly reducing your principal. Great! Roll freed card minimums here when Amazon & Barclays are paid off.']);
+    if (debts.some(d => d.escrow > 0)) alerts.push(['info', 'ℹ️ Mortgage escrow ($1,587.81/mo) is excluded from PILL calculations — only the P&I portion ($4,112.40) affects your amortization.']);
     if (pool >= 500) alerts.push(['success', '✅ You have a healthy prepay pool. Concentrated application per the PILL method could save ' + fmt(totalInterestMin - totalInterestPill) + ' in interest.']);
     alertZone.innerHTML = alerts.map(([type, msg]) => `<div class="alert alert-${type}">${msg}</div>`).join('');
   }
@@ -1910,6 +1919,57 @@
         </div>`;
     }
 
+    // ---- ANNUAL FEES ----
+    const afEl = document.getElementById('annual-fees-display');
+    if (afEl) {
+      const feeDates = debts.filter(d => d.annualFee > 0);
+      if (feeDates.length === 0) {
+        afEl.innerHTML = '<div style="color:var(--muted);font-size:12px;">No annual fees tracked. Add annualFee to a debt to track it.</div>';
+      } else {
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const today = new Date();
+        const currentMonth = today.getMonth() + 1;
+
+        let feeHtml = '';
+        feeDates.forEach(d => {
+          const feeMonth = d.annualFeeMonth || 1;
+          const monthsUntil = feeMonth >= currentMonth
+            ? feeMonth - currentMonth
+            : 12 - currentMonth + feeMonth;
+          const isUrgent = monthsUntil <= 2;
+          const isPast = monthsUntil === 0;
+          const urgentColor = isPast ? 'var(--danger)' : isUrgent ? 'var(--accent2)' : 'var(--pill-green)';
+          const monthlySet = (d.annualFee / Math.max(monthsUntil, 1)).toFixed(2);
+
+          feeHtml += `<div style="background:var(--surface2);border:1px solid ${isUrgent ? urgentColor + '55' : 'var(--border)'};border-radius:10px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${d.name}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+                Due: <strong style="color:${urgentColor}">${monthNames[feeMonth-1]} 2026</strong>
+                · ${monthsUntil === 0 ? '<span style="color:var(--danger)">Due this month!</span>' : monthsUntil + ' months away'}
+              </div>
+              ${monthsUntil > 0 ? `<div style="font-size:10px;color:var(--muted);margin-top:3px;">
+                Set aside <strong style="color:var(--accent2)">$${monthlySet}/mo</strong> now to be ready
+              </div>` : ''}
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'DM Serif Display',serif;font-size:24px;color:${urgentColor};">${fmt2(d.annualFee)}</div>
+              <div style="font-size:10px;color:var(--muted);">annual fee</div>
+            </div>
+          </div>`;
+        });
+
+        // Total fees coming up this year
+        const totalFees = feeDates.reduce((s,d) => s + d.annualFee, 0);
+        feeHtml += `<div style="padding:10px 14px;background:rgba(240,200,64,0.07);border:1px solid rgba(240,200,64,0.2);border-radius:8px;font-size:12px;color:var(--muted);">
+          💡 Total annual fees this year: <strong style="color:var(--accent2)">${fmt2(totalFees)}</strong>. 
+          Consider whether the card benefits justify the cost — if not, call and ask for a fee waiver or product change.
+        </div>`;
+
+        afEl.innerHTML = feeHtml;
+      }
+    }
+
     // ---- SMART BONUS ALLOCATOR ----
     const sbEl = document.getElementById('smart-bonus-display');
     if (sbEl && bonusAmt > 0) {
@@ -1992,10 +2052,12 @@
     const P = d.balance;
     const pmt = d.minPayment;
 
-    // Build full amortization for first 24 payments
+    // Build next 24 payments starting from actual current payment number
+    const paymentStart = d.paymentNum || 1;
     let bal = P;
     let rows = [];
     for (let i = 1; i <= Math.min(d.months || 360, 24); i++) {
+      const pmtLabel = paymentStart + i - 1;
       const interest = bal * r;
       const principal = Math.max(0, pmt - interest);
       const nextBal = Math.max(0, bal - principal);
@@ -2010,7 +2072,7 @@
       const cancelRatio = nextPrincipal > 0 ? (nextInterest / nextPrincipal) : 0;
 
       rows.push({
-        num: i,
+        num: pmtLabel,
         interest: interest,
         principal: principal,
         balance: nextBal,
@@ -2027,7 +2089,22 @@
     // Highlight the highest-ratio rows (best PILL opportunities)
     const maxRatio = Math.max(...rows.map(r => r.cancelRatio));
 
+    const isInterestOnly = d.interestOnly === true;
+    const hasEscrow = (d.escrow || 0) > 0;
+    const paymentNumStart = d.paymentNum || 1;
+
     let html = `
+      ${hasEscrow ? `<div style="margin-bottom:10px;padding:10px 14px;background:rgba(96,212,240,0.07);border:1px solid rgba(96,212,240,0.2);border-radius:8px;font-size:11px;color:var(--accent3);">
+        ℹ️ <strong>Escrow note:</strong> Your full mortgage payment is <strong>$5,700.21</strong>
+        (P&I $4,112.40 + Escrow $1,587.81). This schedule uses P&I only.
+        When making extra PILL payments, send them <strong>separately</strong> marked
+        <em>"apply to principal only"</em> — escrow does not reduce your balance.
+      </div>` : ''}
+      ${isInterestOnly ? `<div style="margin-bottom:10px;padding:10px 14px;background:rgba(240,96,96,0.07);border:1px solid rgba(240,96,96,0.2);border-radius:8px;font-size:11px;color:var(--danger);">
+        ⚡ <strong>Interest-Only HELOC:</strong> You are paying <strong>$900/mo</strong>
+        — $679.09 covers interest, and <strong>$220.91 is reducing your principal</strong>
+        every month. Every dollar above $679.09 goes straight to your balance.
+      </div>` : ''}
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
         <strong style="color:var(--text);">How to read this:</strong> For each upcoming payment, 
         the <span style="color:var(--accent)">Extra Principal</span> column shows how much extra to send 
@@ -2324,27 +2401,36 @@
     document.getElementById('inc-side').value      = 300;
     document.getElementById('inc-other').value     = 2100;
     // EXPENSES
-    document.getElementById('exp-insurance').value  = 514;
-    document.getElementById('exp-subs').value       = 81.58;
-    document.getElementById('exp-utilities').value  = 266.67;
-    document.getElementById('exp-grocery').value    = 140;
-    document.getElementById('exp-dining').value     = 1662.91;
-    document.getElementById('exp-transport').value  = 0;
-    document.getElementById('exp-other').value      = 0;
+    // Expenses from Envelope Money app (03/15/2026)
+    document.getElementById('exp-insurance').value  = 514;    // State Farm
+    document.getElementById('exp-subs').value       = 108.54; // Subscriptions envelope
+    document.getElementById('exp-utilities').value  = 303.67; // Electricity $187 + Water $116.67 avg
+    document.getElementById('exp-grocery').value    = 140;    // Lawn Services
+    document.getElementById('exp-dining').value     = 1652.01;// Tithe & Offering
+    document.getElementById('exp-transport').value  = 200;    // Gas envelope
+    document.getElementById('exp-other').value      = 400;    // Dining/Lunch $250 + Personal/Play $150
     // DEBTS
     debts = [];
     debtCounter = 0;
-    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'Mortgage – Carter Bank', balance: 0, apr: 6.5, minPayment: 5700.21, months: 300 });
-    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'HELOC – ACFCU', balance: 0, apr: 8.5, minPayment: 800, months: 120 });
-    debts.push({ id: ++debtCounter, type: 'car', name: 'Solar Loan – Service Financials', balance: 0, apr: 5.99, minPayment: 485.82, months: 84 });
-    debts.push({ id: ++debtCounter, type: 'car', name: 'Subaru – ACFCU', balance: 0, apr: 6.9, minPayment: 296, months: 48 });
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Gemini Card', balance: 2938.81, apr: 24.99, minPayment: 139, months: 24 });
+    // Mortgage: from Feb 2026 Carter Bank statement. Payment #58 of 360 (closed May 2021).
+    // P&I = $4,112.40 | Escrow = $1,587.81 | Total = $5,700.21 | Rate locked until 06/2031
+    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'Mortgage – Carter Bank', balance: 862525.23, apr: 3.125, minPayment: 4112.40, months: 303, escrow: 1587.81, paymentNum: 58 });
+    // HELOC: Interest-Only. Credit limit $120K. Drawn = $117,992.02.
+    // Paying $900/mo per envelope ($679.09 interest + ~$220.91 extra principal)
+    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'HELOC – ACFCU (Interest Only)', balance: 117992.02, apr: 7.5, minPayment: 900, months: 120, interestOnly: true });
+    // Solar Loan: from 03/15/2026 statement. Original $99,840. Rate 2.99% (very low — attack last among consumer debts)
+    // Solar Loan: updated balance 03/15/2026
+    debts.push({ id: ++debtCounter, type: 'car', name: 'Solar Loan – Service Financials', balance: 96765.58, apr: 2.99, minPayment: 485.82, months: 84 });
+    // Subaru WRX 2017: from ACFCU 03/15/2026. Rate 5.14% (was 6.9%), balance $8,735.78
+    debts.push({ id: ++debtCounter, type: 'car', name: 'Subaru WRX – ACFCU', balance: 8735.78, apr: 5.14, minPayment: 295.93, months: 30 });
+    // ✅ PAID OFF — Gemini Card (was $2,938.81 at 24.99%)
+    // ✅ PAID OFF — Bank of America (was $2,179.70 at 21.99%)
+    // ✅ PAID OFF — American Express balance $0 — but $95 annual fee due August 2026
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'American Express ✓ Paid Off', balance: 0, apr: 18.99, minPayment: 0, months: 0, annualFee: 95, annualFeeMonth: 8 });
     debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover Miles', balance: 3179.28, apr: 22.99, minPayment: 80, months: 48 });
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Bank of America', balance: 2179.70, apr: 21.99, minPayment: 168, months: 18 });
     debts.push({ id: ++debtCounter, type: 'credit', name: 'Apple Card', balance: 1487.86, apr: 19.99, minPayment: 122, months: 15 });
     debts.push({ id: ++debtCounter, type: 'credit', name: 'Amazon Store Card', balance: 447.97, apr: 29.99, minPayment: 51, months: 12 });
     debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays Card', balance: 454.34, apr: 20.99, minPayment: 74, months: 8 });
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'American Express', balance: 0, apr: 18.99, minPayment: 95, months: 12 });
   }
 
   window.addEventListener('DOMContentLoaded', () => {

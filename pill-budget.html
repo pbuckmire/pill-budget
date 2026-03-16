@@ -1275,17 +1275,18 @@
     document.getElementById('s-reserve').textContent = fmt(reserve);
     document.getElementById('s-prepay').textContent = fmt(prepayPool);
 
-    // PILL priority: credit/consumer debt first by APR, then secured loans, mortgage last
-    function pillPriority(d) {
-      if (d.type === 'credit') return 0;
-      if (d.name && d.name.toLowerCase().includes('heloc')) return 1;
-      if (d.type === 'car') return 2;
-      return 3; // mortgage last
-    }
+    // Rank debts by interest cost per dollar (APR × balance).
+    // This mirrors the simplified PILL ranking used in the iOS app, which
+    // prioritizes debts generating the highest interest cost rather than
+    // grouping by type. Debts with zero balance or APR naturally fall to
+    // the bottom of the list.
     const sorted = [...debts].sort((a, b) => {
-      const pa = pillPriority(a), pb = pillPriority(b);
-      if (pa !== pb) return pa - pb;
-      return b.apr - a.apr; // within same group, highest APR first
+      const costA = (a.apr || 0) * (a.balance || 0);
+      const costB = (b.apr || 0) * (b.balance || 0);
+      // Higher interest cost comes first
+      if (costB !== costA) return costB - costA;
+      // When costs are equal, fall back to descending APR to break ties
+      return (b.apr || 0) - (a.apr || 0);
     });
 
     // Estimate total interest min-only
@@ -1425,18 +1426,16 @@
     const pool = income - expenses - minPmts;
     const prepayPool = Math.max(0, pool * 0.9);
 
-    // PILL priority: consumer debt first, then secured, mortgage last; within group sort by APR desc
-    const activeDebts = debts.filter(d => d.balance > 0 || d.minPayment > 0);
-    function pillPriorityAdv(d) {
-      if (d.type === 'credit') return 0;
-      if (d.name && d.name.toLowerCase().includes('heloc')) return 1;
-      if (d.type === 'car') return 2;
-      return 3;
-    }
+    // Rank debts by interest cost per dollar (APR × balance) for advisory prioritization.
+    // This approach aligns with the simplified PILL ranking in the iOS app, focusing solely
+    // on which debts are generating the most interest. Debts with zero balance or APR
+    // will naturally fall to the bottom. Ties are broken by higher APR.
+    const activeDebts = debts.filter(d => (d.balance > 0 || d.minPayment > 0));
     const sorted = [...activeDebts].sort((a, b) => {
-      const pa = pillPriorityAdv(a), pb = pillPriorityAdv(b);
-      if (pa !== pb) return pa - pb;
-      return b.apr - a.apr;
+      const costA = (a.apr || 0) * (a.balance || 0);
+      const costB = (b.apr || 0) * (b.balance || 0);
+      if (costB !== costA) return costB - costA;
+      return (b.apr || 0) - (a.apr || 0);
     });
 
     function monthsToPayoff(balance, apr, payment) {

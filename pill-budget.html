@@ -741,6 +741,24 @@
       </div>
     </div>
 
+    <!-- Next Transfer to Debt Card -->
+    <div class="card" id="next-transfer-card" style="margin-bottom:16px;">
+      <div class="card-title">📅 Next Transfer to Debt</div>
+      <div class="card-sub">Save up and apply at the optimal time</div>
+      <div class="strategy-row">
+        <span class="strategy-label">Date</span>
+        <span class="strategy-value" id="next-transfer-date">—</span>
+      </div>
+      <div class="strategy-row">
+        <span class="strategy-label">Amount</span>
+        <span class="strategy-value" id="next-transfer-amount">—</span>
+      </div>
+      <div class="strategy-row">
+        <span class="strategy-label">Debt</span>
+        <span class="strategy-value" id="next-transfer-debt">—</span>
+      </div>
+    </div>
+
     <div class="card" style="margin-bottom:16px">
       <div class="section-hdr">
         <div>
@@ -1343,6 +1361,49 @@
       totalInterestPill += interestPill;
       return { d, i, extra, newMonths, saved };
     });
+
+    // ------------------------------------------------------------------------
+    // Next Transfer Logic
+    //
+    // Determine when the user will have accumulated enough in the prepayment
+    // pool to make the recommended extra payment on the highest priority debt.
+    // We assume the "extra" amount for the top ranked debt represents the
+    // recommended additional payment (beyond the minimum) and that the
+    // prepayPool reflects the monthly amount available for prepayment after
+    // reserving 10% of the pool for emergencies.  The next transfer date is
+    // calculated by dividing the required extra by the monthly prepay pool to
+    // estimate how many months are needed to save up.  The date is then set
+    // that many months from today.  If no debts exist or the prepay pool is
+    // insufficient, the fields remain blank.
+    {
+      const nextDateEl = document.getElementById('next-transfer-date');
+      const nextAmtEl = document.getElementById('next-transfer-amount');
+      const nextDebtEl = document.getElementById('next-transfer-debt');
+      if (nextDateEl && nextAmtEl && nextDebtEl) {
+        if (rows.length > 0) {
+          const topRow = rows[0];
+          const extra = topRow.extra;
+          nextDebtEl.textContent = topRow.d.name;
+          if (extra > 0 && prepayPool > 0) {
+            const monthsNeeded = Math.ceil(extra / prepayPool);
+            const now = new Date();
+            const nextDate = new Date(now.getFullYear(), now.getMonth() + monthsNeeded, now.getDate());
+            const yyyy = nextDate.getFullYear();
+            const mm = String(nextDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(nextDate.getDate()).padStart(2, '0');
+            nextDateEl.textContent = `${yyyy}-${mm}-${dd}`;
+            nextAmtEl.textContent = fmt(extra);
+          } else {
+            nextDateEl.textContent = '—';
+            nextAmtEl.textContent = '—';
+          }
+        } else {
+          nextDateEl.textContent = '—';
+          nextAmtEl.textContent = '—';
+          nextDebtEl.textContent = '—';
+        }
+      }
+    }
 
     // Desktop table
     tbody.innerHTML = rows.map(({d, i, extra, newMonths, saved}) => `<tr>

@@ -742,6 +742,35 @@
       </div>
     </div>
 
+    <!-- Financial Overview / Savings Buffer -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🛡 Financial Overview — Savings Buffer</div>
+      <div class="card-sub">Liquidity check before making extra debt payments</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">Emergency Fund (Envelope)</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent);">$8,263</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Current savings balance</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">Recommended Liquid Min.</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent2);">$6,000</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">House, medical, legal reserve</div>
+        </div>
+        <div style="background:var(--surface2);border:2px solid rgba(76,175,125,0.3);border-radius:8px;padding:14px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">Available for Debt Prepayment</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--pill-green);">~$2,263</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Above the $6K floor</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px;background:rgba(240,200,64,0.07);border:1px solid rgba(240,200,64,0.2);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.7;">
+        ⚠️ <strong style="color:var(--accent2)">Maintain liquidity buffer before making extra debt payments.</strong>
+        Ongoing legal retainer costs and unpredictable house/medical expenses mean the $6,000 floor should be
+        preserved. Do <strong>not</strong> pull from savings for debt payoff — use monthly cash flow instead.
+        The ~$2,263 above the floor is available as a one-time lump sum if needed for a high-APR payoff.
+      </div>
+    </div>
+
     <!-- Next Transfer to Debt Card -->
     <div class="card" id="next-transfer-card" style="margin-bottom:16px;">
       <div class="card-title">📅 Next Transfer to Debt</div>
@@ -790,7 +819,7 @@
     </div>
 
     <div class="footer-note">
-      <span class="inline-accent">⚡ PILL Principle:</span> Unlike snowball/avalanche, the PILL method focuses on <strong>interest cancellation at the amortization level</strong> — applying small prepayments directly to principal at the right moment to eliminate disproportionately large future interest charges. Debts are ranked by <em>interest cost per dollar owed</em> (APR × balance), not just highest rate. Your available prepay pool is distributed starting with Priority 1 until its minimum is covered, then cascades. Estimates are illustrative; actual savings depend on your lender's prepayment application policy.
+      <span class="inline-accent">⚡ PILL Principle:</span> Unlike snowball/avalanche, the PILL method focuses on <strong>interest cancellation at the amortization level</strong> — applying small prepayments directly to principal at the right moment to eliminate disproportionately large future interest charges. Debts are ranked by <em>interest cost per dollar owed</em> (APR × balance), not just highest rate. Your available prepay pool is distributed starting with Priority 1 until its minimum is covered, then cascades to the next debt. As each debt is paid off, its freed minimum rolls forward, accelerating the next target. Estimates are illustrative; actual savings depend on your lender's prepayment application policy.
     </div>
 
     <div style="margin-top:20px;display:flex;gap:12px;justify-content:space-between;">
@@ -1304,7 +1333,7 @@
     document.getElementById('s-prepay').textContent = fmt(prepayPool);
 
     // PILL avalanche: highest APR first. Ties broken by lower balance (eliminate faster).
-    // Barclays (25.99%) → Discover (19.74%) → HELOC (7.50%) → Subaru (5.14%) → Mortgage (3.13%)
+    // Amazon (29.49%) → Barclays (25.99%) → Discover (19.74%) → Apple (19.49%) → HELOC (7.50%) → Subaru (5.14%) → Mortgage (3.13%)
     const sorted = [...debts].sort((a, b) => {
       // Higher APR first
       if ((b.apr || 0) !== (a.apr || 0)) return (b.apr || 0) - (a.apr || 0);
@@ -1477,10 +1506,24 @@
     const alerts = [];
     if (pool < 0) alerts.push(['warn', '⚠ Your outflows exceed income. Reduce expenses before applying prepayments.']);
     if (pool > 0 && pool < 100) alerts.push(['warn', '💡 Your prepay pool is small — even $' + Math.round(pool) + '/mo applied to principal can meaningfully cancel interest over time.']);
-    if (debts.some(d => d.apr >= 18)) alerts.push(['info', '🎯 You have high-rate credit card debt. PILL recommends eliminating this first — it costs the most per dollar owed.']);
-    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC (IO): Your minimum is interest-only at ~$737.45/mo. Every dollar above that reduces principal. Roll freed card minimums here when Barclays & Discover are paid off.']);
+    // Quick-kill strategy: Amazon + Barclays
+    if (debts.some(d => d.name.includes('Amazon')) && debts.some(d => d.name.includes('Barclays'))) {
+      const amazon = debts.find(d => d.name.includes('Amazon'));
+      const barclays = debts.find(d => d.name.includes('Barclays'));
+      if (amazon && barclays && amazon.balance > 0 && barclays.balance > 0) {
+        alerts.push(['success', '🎯 <strong>Quick kills:</strong> Amazon ($' + amazon.balance.toLocaleString() + ') and Barclays ($' + barclays.balance.toLocaleString() + ') total only <strong>$' + (amazon.balance + barclays.balance).toLocaleString() + '</strong> combined — small enough to eliminate from monthly cash flow alone. Once paid off, roll their freed minimums ($' + (amazon.minPayment + barclays.minPayment) + '/mo) into Discover and Apple Card.']);
+      }
+    }
+    // Amazon Payment Security fee warning
+    if (debts.some(d => d.name.includes('Amazon') && d.balance > 0)) alerts.push(['warn', '📞 <strong>Amazon Prime Store Card:</strong> Cancel the optional "Payment Security" fee ($7.43/mo) — call <strong>1-800-815-4051</strong> (Synchrony Bank). That\'s $89/yr saved immediately.']);
+    // Apple Card goal
+    if (debts.some(d => d.name.includes('Apple Card') && d.balance > 0)) alerts.push(['info', '🍎 <strong>Apple Card goal:</strong> Pay off the $1,512.78 balance, then convert to your daily spending card — pay statement in full monthly to avoid interest going forward.']);
+    if (debts.some(d => d.apr >= 18)) alerts.push(['info', '🎯 You have high-rate credit card debt (4 cards above 19% APR). PILL recommends eliminating these first — they cost the most per dollar owed.']);
+    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC (IO): Your minimum is interest-only at ~$737.45/mo. Every dollar above that reduces principal. Roll freed card minimums here when all credit cards are paid off.']);
     if (debts.some(d => d.familyContribution > 0)) alerts.push(['info', 'ℹ️ Mortgage: Gross ~$3,600/mo, but ~$3,400/mo offset by family contributions (Zelle + Apple Cash). Your net out-of-pocket is ~$200-300/mo.']);
-    if (debts.some(d => d.paymentNote)) alerts.push(['info', 'ℹ️ Subaru WRX: Minimum payment is estimated at $250/mo — verify exact amount with your lender.']);
+    // Savings/liquidity warning
+    alerts.push(['warn', '🛡 <strong>Liquidity first:</strong> Do NOT pull from savings for debt payoff. Maintain $6,000 liquid minimum for house, medical, and legal emergencies. Use monthly cash flow for extra debt payments.']);
+    if (debts.some(d => d.paymentNote && d.name.includes('Subaru'))) alerts.push(['info', 'ℹ️ Subaru WRX: Minimum payment is estimated at $250/mo — verify exact amount with your lender.']);
     if (pool >= 500) alerts.push(['success', '✅ You have a healthy prepay pool. Concentrated application per the PILL method could save ' + fmt(totalInterestMin - totalInterestPill) + ' in interest.']);
     alertZone.innerHTML = alerts.map(([type, msg]) => `<div class="alert alert-${type}">${msg}</div>`).join('');
   }
@@ -1688,7 +1731,7 @@
 
       if (remaining > 0) {
         bonusHtml += `<div style="background:rgba(200,240,96,0.07);border:1px solid rgba(200,240,96,0.2);border-radius:8px;padding:12px;margin-bottom:10px;">
-          <div style="font-size:12px;color:var(--accent);">💡 ${fmt(remaining)} remaining after all credit cards — apply to your Subaru loan or HELOC next, or invest.</div>
+          <div style="font-size:12px;color:var(--accent);">💡 ${fmt(remaining)} remaining after credit cards — apply to Subaru loan or HELOC next, or invest.</div>
         </div>`;
       }
 
@@ -2474,12 +2517,18 @@
     debts = [];
     debtCounter = 0;
 
-    // ── Credit Cards ──
+    // ── Credit Cards (PILL avalanche order — highest APR first) ──
+    // Amazon Prime Store Card (Synchrony, ending 0424): balance $455.26 | APR 29.49% | min $29 | due 05/05/2026
+    // ⚡ PILL PRIORITY TARGET #1 — highest APR + small balance = fastest payoff
+    // NOTE: Cancel "Payment Security" optional fee ($7.43/mo) — call 1-800-815-4051
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Amazon Prime Store Card (0424)', balance: 455.26, apr: 29.49, minPayment: 29, months: 18, nextDue: '2026-05-05', paymentNote: 'Synchrony Bank — Cancel "Payment Security" fee ($7.43/mo): call 1-800-815-4051' });
+    // Barclays View Mastercard: balance $400.87 | APR 25.99% | min $30 | due 05/07/2026
+    // ⚡ PILL PRIORITY TARGET #2 — second-highest APR + smallest balance
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays View® Mastercard®', balance: 400.87, apr: 25.99, minPayment: 30, months: 18, nextDue: '2026-05-07' });
     // Discover it Miles: balance $3,116.53 | APR 19.74% | min $63 | due 04/14/2026
     debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover it Miles Card', balance: 3116.53, apr: 19.74, minPayment: 63, months: 48, nextDue: '2026-04-14' });
-    // Barclays View Mastercard: balance $400.87 | APR 25.99% | min $30 | due 05/07/2026
-    // ⚡ PILL PRIORITY TARGET — highest APR + smallest balance = fastest payoff
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays View® Mastercard®', balance: 400.87, apr: 25.99, minPayment: 30, months: 18, nextDue: '2026-05-07' });
+    // Apple Card: balance $1,512.78 | APR 19.49% | min ~$29 | Goal: pay off → use as daily spend card (pay in full monthly)
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Apple Card', balance: 1512.78, apr: 19.49, minPayment: 29, months: 48, paymentNote: 'Goal: Pay off → use as daily spending card (pay in full monthly)' });
 
     // ── Auto Loan ──
     // Subaru WRX 2017: balance $8,474.30 | APR 5.14% | min ~$250 (estimate — verify exact payment)

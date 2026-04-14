@@ -554,6 +554,7 @@
         <span style="color:var(--accent);">Every penny optimized.</span>
       </div>
       <div id="save-indicator" style="font-size:11px;min-height:16px;transition:opacity .3s;"></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:0.04em;">Debt data last synced: <span style="color:var(--accent);">April 14, 2026</span> via Plaid</div>
       <button onclick="clearSavedData()" class="btn btn-outline btn-sm" style="margin-top:8px;font-size:10px;padding:5px 12px;">↺ Reset to Defaults</button>
     </div>
   </header>
@@ -1471,7 +1472,7 @@
     if (pool < 0) alerts.push(['warn', '⚠ Your outflows exceed income. Reduce expenses before applying prepayments.']);
     if (pool > 0 && pool < 100) alerts.push(['warn', '💡 Your prepay pool is small — even $' + Math.round(pool) + '/mo applied to principal can meaningfully cancel interest over time.']);
     if (debts.some(d => d.apr >= 18)) alerts.push(['info', '🎯 You have high-rate credit card debt. PILL recommends eliminating this first — it costs the most per dollar owed.']);
-    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC: You are paying $900/mo — $679.09 interest + $220.91 directly reducing your principal. Great! Roll freed card minimums here when Amazon & Barclays are paid off.']);
+    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC: You are paying $900/mo — $679.09 interest + $220.91 directly reducing your principal. Great! Roll freed card minimums here when Barclays & Discover are paid off.']);
     if (debts.some(d => d.escrow > 0)) alerts.push(['info', 'ℹ️ Mortgage escrow ($1,587.81/mo) is excluded from PILL calculations — only the P&I portion ($4,112.40) affects your amortization.']);
     if (pool >= 500) alerts.push(['success', '✅ You have a healthy prepay pool. Concentrated application per the PILL method could save ' + fmt(totalInterestMin - totalInterestPill) + ' in interest.']);
     alertZone.innerHTML = alerts.map(([type, msg]) => `<div class="alert alert-${type}">${msg}</div>`).join('');
@@ -1685,7 +1686,7 @@
 
       if (remaining > 0) {
         bonusHtml += `<div style="background:rgba(200,240,96,0.07);border:1px solid rgba(200,240,96,0.2);border-radius:8px;padding:12px;margin-bottom:10px;">
-          <div style="font-size:12px;color:var(--accent);">💡 ${fmt(remaining)} remaining after all credit cards — apply to your HELOC or Subaru loan next, or invest.</div>
+          <div style="font-size:12px;color:var(--accent);">💡 ${fmt(remaining)} remaining after all credit cards — apply to your Subaru loan or HELOC next, or invest.</div>
         </div>`;
       }
 
@@ -2483,14 +2484,16 @@
     debts.push({ id: ++debtCounter, type: 'car', name: 'Solar Loan – Service Financials', balance: 96765.58, apr: 2.99, minPayment: 485.82, months: 84 });
     // Subaru WRX 2017: from ACFCU 03/15/2026. Rate 5.14% (was 6.9%), balance $8,735.78
     debts.push({ id: ++debtCounter, type: 'car', name: 'Subaru WRX – ACFCU', balance: 8735.78, apr: 5.14, minPayment: 295.93, months: 30 });
-    // ✅ PAID OFF — Gemini Card (was $2,938.81 at 24.99%)
-    // ✅ PAID OFF — Bank of America (was $2,179.70 at 21.99%)
+    // ── Credit Cards (Plaid sync · April 14, 2026) ──
+    // Discover it Miles: balance $3,116.53 | APR 19.74% | min $63 | due 04/14/2026 | last pmt $80 on 03/15/2026
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover it Miles Card', balance: 3116.53, apr: 19.74, minPayment: 63, months: 48, lastPayment: 80, lastPaymentDate: '2026-03-15', nextDue: '2026-04-14' });
+    // Barclays View Mastercard: balance $400.87 | APR 25.99% | min $30 | due 05/07/2026
+    // ⚡ PILL PRIORITY TARGET — highest APR + smallest balance = fastest payoff
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays View® Mastercard®', balance: 400.87, apr: 25.99, minPayment: 30, months: 18 });
+    // ✅ PAID OFF — Gemini Credit Card (balance $0 at 22.49%)
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Gemini Credit Card ✓ Paid Off', balance: 0, apr: 22.49, minPayment: 0, months: 0 });
     // ✅ PAID OFF — American Express balance $0 — but $95 annual fee due August 2026
     debts.push({ id: ++debtCounter, type: 'credit', name: 'American Express ✓ Paid Off', balance: 0, apr: 18.99, minPayment: 0, months: 0, annualFee: 95, annualFeeMonth: 8 });
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover Miles', balance: 3179.28, apr: 22.99, minPayment: 80, months: 48 });
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Apple Card', balance: 1487.86, apr: 19.99, minPayment: 122, months: 15 });
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Amazon Store Card', balance: 447.97, apr: 29.99, minPayment: 51, months: 12 });
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays Card', balance: 454.34, apr: 20.99, minPayment: 74, months: 8 });
   }
 
   window.addEventListener('DOMContentLoaded', () => {

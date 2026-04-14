@@ -1237,6 +1237,15 @@
               style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;">
           </div>
         </div>
+        ${d.interestOnly ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(240,96,96,0.07);border:1px solid rgba(240,96,96,0.15);border-radius:6px;font-size:11px;color:var(--danger);">
+          ⚡ <strong>Interest-Only</strong> — Minimum payment is interest only (~$${(d.balance * (d.apr/100) / 12).toFixed(2)}/mo). Variable rate tied to prime.
+        </div>` : ''}
+        ${d.familyContribution ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(200,240,96,0.07);border:1px solid rgba(200,240,96,0.15);border-radius:6px;font-size:11px;color:var(--accent);">
+          👨‍👩‍👦 <strong>Family contribution:</strong> ~$${d.familyContribution.toLocaleString()}/mo ($2,100 Zelle + ~$1,200-$1,500 Apple Cash) — <strong>Your net out-of-pocket: ~$200-300/mo</strong>
+        </div>` : ''}
+        ${d.paymentNote ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(96,212,240,0.07);border:1px solid rgba(96,212,240,0.15);border-radius:6px;font-size:11px;color:var(--accent3);">
+          ℹ️ ${d.paymentNote}
+        </div>` : ''}
       </div>
     `).join('');
     recalc();
@@ -1294,18 +1303,13 @@
     document.getElementById('s-reserve').textContent = fmt(reserve);
     document.getElementById('s-prepay').textContent = fmt(prepayPool);
 
-    // Rank debts by interest cost per dollar (APR × balance).
-    // This mirrors the simplified PILL ranking used in the iOS app, which
-    // prioritizes debts generating the highest interest cost rather than
-    // grouping by type. Debts with zero balance or APR naturally fall to
-    // the bottom of the list.
+    // PILL avalanche: highest APR first. Ties broken by lower balance (eliminate faster).
+    // Barclays (25.99%) → Discover (19.74%) → HELOC (7.50%) → Subaru (5.14%) → Mortgage (3.13%)
     const sorted = [...debts].sort((a, b) => {
-      const costA = (a.apr || 0) * (a.balance || 0);
-      const costB = (b.apr || 0) * (b.balance || 0);
-      // Higher interest cost comes first
-      if (costB !== costA) return costB - costA;
-      // When costs are equal, fall back to descending APR to break ties
-      return (b.apr || 0) - (a.apr || 0);
+      // Higher APR first
+      if ((b.apr || 0) !== (a.apr || 0)) return (b.apr || 0) - (a.apr || 0);
+      // Ties: smaller balance first (quicker payoff)
+      return (a.balance || 0) - (b.balance || 0);
     });
 
     // Estimate total interest min-only
@@ -1411,7 +1415,8 @@
         <td><span class="priority-badge ${pClasses[Math.min(i,2)]}">${i+1}</span></td>
         <td>
           <div style="font-weight:500">${d.name}</div>
-          <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em">${d.type}</div>
+          <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em">${d.type}${d.interestOnly ? ' · interest-only' : ''}${d.paymentNote ? ' · <span style="color:var(--accent3)">est.</span>' : ''}</div>
+          ${d.familyContribution ? `<div style="color:var(--accent);font-size:10px;margin-top:2px;">Family offset: ~$${d.familyContribution.toLocaleString()}/mo · Net: ~$${d.netOutOfPocket}/mo</div>` : ''}
         </td>
         <td>${fmt(d.balance)}</td>
         <td style="color:${colors[Math.min(i,2)]}">${d.apr.toFixed(2)}%</td>
@@ -1430,7 +1435,8 @@
             <span class="priority-badge ${pClasses[Math.min(i,2)]}">${i+1}</span>
             <div>
               <div style="font-weight:500;font-size:13px;">${d.name}</div>
-              <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em">${d.type}</div>
+              <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em">${d.type}${d.interestOnly ? ' · IO' : ''}${d.paymentNote ? ' · est.' : ''}</div>
+              ${d.familyContribution ? `<div style="color:var(--accent);font-size:9px;margin-top:2px;">Family: ~$${d.familyContribution.toLocaleString()}/mo · Net: ~$${d.netOutOfPocket}/mo</div>` : ''}
             </div>
           </div>
           <div style="text-align:right;">
@@ -1472,8 +1478,9 @@
     if (pool < 0) alerts.push(['warn', '⚠ Your outflows exceed income. Reduce expenses before applying prepayments.']);
     if (pool > 0 && pool < 100) alerts.push(['warn', '💡 Your prepay pool is small — even $' + Math.round(pool) + '/mo applied to principal can meaningfully cancel interest over time.']);
     if (debts.some(d => d.apr >= 18)) alerts.push(['info', '🎯 You have high-rate credit card debt. PILL recommends eliminating this first — it costs the most per dollar owed.']);
-    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC: You are paying $900/mo — $679.09 interest + $220.91 directly reducing your principal. Great! Roll freed card minimums here when Barclays & Discover are paid off.']);
-    if (debts.some(d => d.escrow > 0)) alerts.push(['info', 'ℹ️ Mortgage escrow ($1,587.81/mo) is excluded from PILL calculations — only the P&I portion ($4,112.40) affects your amortization.']);
+    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC (IO): Your minimum is interest-only at ~$737.45/mo. Every dollar above that reduces principal. Roll freed card minimums here when Barclays & Discover are paid off.']);
+    if (debts.some(d => d.familyContribution > 0)) alerts.push(['info', 'ℹ️ Mortgage: Gross ~$3,600/mo, but ~$3,400/mo offset by family contributions (Zelle + Apple Cash). Your net out-of-pocket is ~$200-300/mo.']);
+    if (debts.some(d => d.paymentNote)) alerts.push(['info', 'ℹ️ Subaru WRX: Minimum payment is estimated at $250/mo — verify exact amount with your lender.']);
     if (pool >= 500) alerts.push(['success', '✅ You have a healthy prepay pool. Concentrated application per the PILL method could save ' + fmt(totalInterestMin - totalInterestPill) + ' in interest.']);
     alertZone.innerHTML = alerts.map(([type, msg]) => `<div class="alert alert-${type}">${msg}</div>`).join('');
   }
@@ -1488,16 +1495,11 @@
     const pool = income - expenses - minPmts;
     const prepayPool = Math.max(0, pool * 0.9);
 
-    // Rank debts by interest cost per dollar (APR × balance) for advisory prioritization.
-    // This approach aligns with the simplified PILL ranking in the iOS app, focusing solely
-    // on which debts are generating the most interest. Debts with zero balance or APR
-    // will naturally fall to the bottom. Ties are broken by higher APR.
+    // PILL avalanche: highest APR first for advisory prioritization.
     const activeDebts = debts.filter(d => (d.balance > 0 || d.minPayment > 0));
     const sorted = [...activeDebts].sort((a, b) => {
-      const costA = (a.apr || 0) * (a.balance || 0);
-      const costB = (b.apr || 0) * (b.balance || 0);
-      if (costB !== costA) return costB - costA;
-      return (b.apr || 0) - (a.apr || 0);
+      if ((b.apr || 0) !== (a.apr || 0)) return (b.apr || 0) - (a.apr || 0);
+      return (a.balance || 0) - (b.balance || 0);
     });
 
     function monthsToPayoff(balance, apr, payment) {
@@ -2045,11 +2047,10 @@
         breakdown.push({ label: '🛡 Emergency Fund (fill to target)', amount: alloc, color: 'var(--accent3)', note: `Brings fund to ${fmt2(Math.min(efCurrent + alloc, efTarget))} of ${fmt2(efTarget)} target` });
       }
 
-      // Step 2: Apply rest to debts in PILL order
+      // Step 2: Apply rest to debts in PILL avalanche order (highest APR first)
       const pillSorted = [...debts.filter(d => d.balance > 0)].sort((a,b) => {
-        const pa = (a.type==='credit'?0:a.name?.toLowerCase().includes('heloc')?1:a.type==='car'?2:3);
-        const pb = (b.type==='credit'?0:b.name?.toLowerCase().includes('heloc')?1:b.type==='car'?2:3);
-        if (pa!==pb) return pa-pb; return b.apr-a.apr;
+        if ((b.apr || 0) !== (a.apr || 0)) return (b.apr || 0) - (a.apr || 0);
+        return (a.balance || 0) - (b.balance || 0);
       });
       pillSorted.forEach(d => {
         if (remaining <= 0) return;
@@ -2162,9 +2163,8 @@
         <em>"apply to principal only"</em> — escrow does not reduce your balance.
       </div>` : ''}
       ${isInterestOnly ? `<div style="margin-bottom:10px;padding:10px 14px;background:rgba(240,96,96,0.07);border:1px solid rgba(240,96,96,0.2);border-radius:8px;font-size:11px;color:var(--danger);">
-        ⚡ <strong>Interest-Only HELOC:</strong> You are paying <strong>$900/mo</strong>
-        — $679.09 covers interest, and <strong>$220.91 is reducing your principal</strong>
-        every month. Every dollar above $679.09 goes straight to your balance.
+        ⚡ <strong>Interest-Only HELOC:</strong> Your minimum is <strong>interest-only at ~$737.45/mo</strong>.
+        Every dollar above $737.45 goes straight to reducing your principal balance.
       </div>` : ''}
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
         <strong style="color:var(--text);">How to read this:</strong> For each upcoming payment, 
@@ -2470,30 +2470,31 @@
     document.getElementById('exp-dining').value     = 1652.01;// Tithe & Offering
     document.getElementById('exp-transport').value  = 200;    // Gas envelope
     document.getElementById('exp-other').value      = 400;    // Dining/Lunch $250 + Personal/Play $150
-    // DEBTS
+    // DEBTS — Verified April 14, 2026
     debts = [];
     debtCounter = 0;
-    // Mortgage: from Feb 2026 Carter Bank statement. Payment #58 of 360 (closed May 2021).
-    // P&I = $4,112.40 | Escrow = $1,587.81 | Total = $5,700.21 | Rate locked until 06/2031
-    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'Mortgage – Carter Bank', balance: 862525.23, apr: 3.125, minPayment: 4112.40, months: 303, escrow: 1587.81, paymentNum: 58 });
-    // HELOC: Interest-Only. Credit limit $120K. Drawn = $117,992.02.
-    // Paying $900/mo per envelope ($679.09 interest + ~$220.91 extra principal)
-    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'HELOC – ACFCU (Interest Only)', balance: 117992.02, apr: 7.5, minPayment: 900, months: 120, interestOnly: true });
-    // Solar Loan: from 03/15/2026 statement. Original $99,840. Rate 2.99% (very low — attack last among consumer debts)
-    // Solar Loan: updated balance 03/15/2026
-    debts.push({ id: ++debtCounter, type: 'car', name: 'Solar Loan – Service Financials', balance: 96765.58, apr: 2.99, minPayment: 485.82, months: 84 });
-    // Subaru WRX 2017: from ACFCU 03/15/2026. Rate 5.14% (was 6.9%), balance $8,735.78
-    debts.push({ id: ++debtCounter, type: 'car', name: 'Subaru WRX – ACFCU', balance: 8735.78, apr: 5.14, minPayment: 295.93, months: 30 });
-    // ── Credit Cards (Plaid sync · April 14, 2026) ──
-    // Discover it Miles: balance $3,116.53 | APR 19.74% | min $63 | due 04/14/2026 | last pmt $80 on 03/15/2026
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover it Miles Card', balance: 3116.53, apr: 19.74, minPayment: 63, months: 48, lastPayment: 80, lastPaymentDate: '2026-03-15', nextDue: '2026-04-14' });
+
+    // ── Credit Cards ──
+    // Discover it Miles: balance $3,116.53 | APR 19.74% | min $63 | due 04/14/2026
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover it Miles Card', balance: 3116.53, apr: 19.74, minPayment: 63, months: 48, nextDue: '2026-04-14' });
     // Barclays View Mastercard: balance $400.87 | APR 25.99% | min $30 | due 05/07/2026
     // ⚡ PILL PRIORITY TARGET — highest APR + smallest balance = fastest payoff
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays View® Mastercard®', balance: 400.87, apr: 25.99, minPayment: 30, months: 18 });
-    // ✅ PAID OFF — Gemini Credit Card (balance $0 at 22.49%)
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Gemini Credit Card ✓ Paid Off', balance: 0, apr: 22.49, minPayment: 0, months: 0 });
-    // ✅ PAID OFF — American Express balance $0 — but $95 annual fee due August 2026
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'American Express ✓ Paid Off', balance: 0, apr: 18.99, minPayment: 0, months: 0, annualFee: 95, annualFeeMonth: 8 });
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays View® Mastercard®', balance: 400.87, apr: 25.99, minPayment: 30, months: 18, nextDue: '2026-05-07' });
+
+    // ── Auto Loan ──
+    // Subaru WRX 2017: balance $8,474.30 | APR 5.14% | min ~$250 (estimate — verify exact payment)
+    debts.push({ id: ++debtCounter, type: 'car', name: '2017 Subaru WRX', balance: 8474.30, apr: 5.14, minPayment: 250, months: 36, paymentNote: 'Verify exact payment amount' });
+
+    // ── IO HELOC – 7340 Hill Drive ──
+    // Interest-only HELOC. Balance $117,992.02 | 7.50% variable (prime-tied)
+    // Monthly interest-only payment: $117,992.02 × 7.5% / 12 = ~$737.45/mo
+    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'IO HELOC – 7340 Hill Drive', balance: 117992.02, apr: 7.5, minPayment: 737.45, months: 120, interestOnly: true });
+
+    // ── 10/1 ARM Mortgage (Primary Home) ──
+    // Balance $858,787.89 | APR 3.13% | Gross payment ~$3,600/mo
+    // Family contributions offset ~$3,400/mo ($2,100 Zelle + ~$1,200-$1,500 Apple Cash)
+    // User's net out-of-pocket: ~$200-300/mo
+    debts.push({ id: ++debtCounter, type: 'mortgage', name: '10/1 ARM Mortgage', balance: 858787.89, apr: 3.13, minPayment: 3600, months: 303, familyContribution: 3400, netOutOfPocket: 250 });
   }
 
   window.addEventListener('DOMContentLoaded', () => {

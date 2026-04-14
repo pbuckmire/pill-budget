@@ -832,13 +832,13 @@
 
     <!-- TRUE PILL AMORTIZATION SCHEDULE -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title">⚡ True PILL Prepayment Schedule</div>
-      <div class="card-sub">Exact principal prepayments that cancel maximum future interest — per payment</div>
+      <div class="card-title">⚡ PILL Amortization Schedule</div>
+      <div class="card-sub">Full payoff schedule with projected date, savings, and per-month breakdown</div>
       <div style="margin-bottom:14px;padding:12px 14px;background:rgba(200,240,96,0.06);border:1px solid rgba(200,240,96,0.15);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.7;">
-        The true PILL method works at the <strong style="color:var(--accent)">amortization schedule level</strong>. 
-        Early payments are almost entirely interest — so a small extra principal payment now cancels a disproportionately 
-        large future interest charge. This table shows your top-priority debt's next 12 payment opportunities, 
-        the exact extra principal amount, and the interest it cancels.
+        The PILL engine generates a <strong style="color:var(--accent)">complete amortization schedule</strong> for each debt,
+        showing exactly how every dollar is split between interest and principal each month.
+        When you have a prepay pool available, it applies 100% of extra payments to principal reduction
+        and shows the projected payoff date, months saved, and total interest saved.
       </div>
       <div style="margin-bottom:12px;">
         <label style="display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;">Select Debt to View Schedule</label>
@@ -1471,8 +1471,14 @@
     if (pool < 0) alerts.push(['warn', '⚠ Your outflows exceed income. Reduce expenses before applying prepayments.']);
     if (pool > 0 && pool < 100) alerts.push(['warn', '💡 Your prepay pool is small — even $' + Math.round(pool) + '/mo applied to principal can meaningfully cancel interest over time.']);
     if (debts.some(d => d.apr >= 18)) alerts.push(['info', '🎯 You have high-rate credit card debt. PILL recommends eliminating this first — it costs the most per dollar owed.']);
-    if (debts.some(d => d.interestOnly)) alerts.push(['warn', '⚡ HELOC: You are paying $900/mo — $679.09 interest + $220.91 directly reducing your principal. Great! Roll freed card minimums here when Amazon & Barclays are paid off.']);
-    if (debts.some(d => d.escrow > 0)) alerts.push(['info', 'ℹ️ Mortgage escrow ($1,587.81/mo) is excluded from PILL calculations — only the P&I portion ($4,112.40) affects your amortization.']);
+    debts.filter(d => d.interestOnly).forEach(d => {
+      const hInt = d.balance * (d.apr / 100) / 12;
+      const hPrin = Math.max(0, d.minPayment - hInt);
+      alerts.push(['warn', '⚡ ' + d.name + ': You are paying ' + fmt(d.minPayment) + '/mo — ' + fmt2(hInt,2) + ' interest + ' + fmt2(hPrin,2) + ' directly reducing your principal. Roll freed card minimums here when higher-cost debts are paid off.']);
+    });
+    debts.filter(d => (d.escrow || 0) > 0).forEach(d => {
+      alerts.push(['info', 'ℹ️ ' + d.name + ' escrow (' + fmt2(d.escrow,2) + '/mo) is excluded from PILL calculations — only the P&I portion (' + fmt2(d.minPayment,2) + ') affects your amortization.']);
+    });
     if (pool >= 500) alerts.push(['success', '✅ You have a healthy prepay pool. Concentrated application per the PILL method could save ' + fmt(totalInterestMin - totalInterestPill) + ' in interest.']);
     alertZone.innerHTML = alerts.map(([type, msg]) => `<div class="alert alert-${type}">${msg}</div>`).join('');
   }
@@ -1853,6 +1859,72 @@
     return '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
   }
 
+  // ========== PILL ENGINE (mirrors PILLEngine.swift from iOS app) ==========
+  const PILLEngine = {
+    /**
+     * Generate a full amortization schedule for a single debt.
+     * P – Prepayment goes 100% to principal
+     * I – Interest = remaining * (APR/100/12)
+     * L – Loan balance tracked each period
+     * L – Liquidation schedule generated
+     *
+     * Returns { schedule, totalInterestPaid, totalPaid, monthsToPayoff, payoffDate }
+     */
+    amortize(balance, annualRate, minPayment, monthlyPrepay = 0) {
+      const schedule = [];
+      let remaining = balance;
+      const r = (annualRate / 100) / 12;
+      let totalInterestPaid = 0;
+      let totalPaid = 0;
+      let month = 0;
+
+      while (remaining > 0.005 && month < 600) {
+        month++;
+        const startingBalance = remaining;
+        const interest = remaining * r;
+        const effectiveMinPayment = Math.min(minPayment, remaining + interest);
+        const principalFromMin = Math.max(effectiveMinPayment - interest, 0);
+        const effectivePrepay = Math.min(monthlyPrepay, Math.max(remaining - principalFromMin, 0));
+        const principalPaid = principalFromMin + effectivePrepay;
+        const totalPayment = effectiveMinPayment + effectivePrepay;
+
+        remaining = Math.max(remaining - principalPaid, 0);
+        totalInterestPaid += interest;
+        totalPaid += totalPayment;
+
+        schedule.push({
+          month,
+          startingBalance,
+          interestCharged: interest,
+          principalPaid: principalFromMin,
+          prepaymentApplied: effectivePrepay,
+          totalPayment,
+          endingBalance: remaining
+        });
+      }
+
+      const now = new Date();
+      const payoffDate = new Date(now.getFullYear(), now.getMonth() + month, now.getDate());
+
+      return { schedule, totalInterestPaid, totalPaid, monthsToPayoff: month, payoffDate };
+    },
+
+    /**
+     * Compare payoff with and without prepayment.
+     * Returns { baseline, withPrepay, monthsSaved, interestSaved }
+     */
+    comparePrepayImpact(balance, annualRate, minPayment, monthlyPrepay) {
+      const baseline = this.amortize(balance, annualRate, minPayment, 0);
+      const withPrepay = this.amortize(balance, annualRate, minPayment, monthlyPrepay);
+      return {
+        baseline,
+        withPrepay,
+        monthsSaved: baseline.monthsToPayoff - withPrepay.monthsToPayoff,
+        interestSaved: baseline.totalInterestPaid - withPrepay.totalInterestPaid
+      };
+    }
+  };
+
   function buildAccounts() {
     renderBankAccounts();
 
@@ -2086,6 +2158,14 @@
 
 
   // ========== TRUE PILL AMORTIZATION SCHEDULE ==========
+  // Track which schedule sections are expanded
+  const pillScheduleExpanded = {};
+
+  function togglePillSchedule(debtId) {
+    pillScheduleExpanded[debtId] = !pillScheduleExpanded[debtId];
+    buildPillSchedule();
+  }
+
   function populatePillSelect() {
     const sel = document.getElementById('pill-schedule-select');
     if (!sel) return;
@@ -2108,110 +2188,168 @@
       return;
     }
 
-    const r = (d.apr / 100) / 12;   // monthly rate
-    const P = d.balance;
-    const pmt = d.minPayment;
+    // Calculate the prepay pool available for this debt using the PILL cascade
+    const income = getVal('inc-primary') + getVal('inc-secondary') + getVal('inc-side') + getVal('inc-other');
+    const expenses = getVal('exp-grocery') + getVal('exp-utilities') + getVal('exp-insurance') +
+                     getVal('exp-subs') + getVal('exp-transport') + getVal('exp-dining') + getVal('exp-other');
+    const minPmts = debts.reduce((s,dd) => s + dd.minPayment, 0);
+    const pool = income - expenses - minPmts;
+    const prepayPool = Math.max(0, pool * 0.9);
 
-    // Build next 24 payments starting from actual current payment number
-    const paymentStart = d.paymentNum || 1;
-    let bal = P;
-    let rows = [];
-    for (let i = 1; i <= Math.min(d.months || 360, 24); i++) {
-      const pmtLabel = paymentStart + i - 1;
-      const interest = bal * r;
-      const principal = Math.max(0, pmt - interest);
-      const nextBal = Math.max(0, bal - principal);
-
-      // PILL insight: the NEXT payment's interest charge is what we can cancel by prepaying now.
-      // Prepaying one extra principal unit now saves exactly r * (that amount) next month,
-      // and compounds forward. The "power" of a prepayment = interest on the next scheduled principal.
-      // We show: if you add the NEXT row's principal as an extra payment THIS month,
-      // you skip that future payment entirely.
-      const nextInterest = nextBal * r;
-      const nextPrincipal = Math.max(0, pmt - nextInterest);
-      const cancelRatio = nextPrincipal > 0 ? (nextInterest / nextPrincipal) : 0;
-
-      rows.push({
-        num: pmtLabel,
-        interest: interest,
-        principal: principal,
-        balance: nextBal,
-        // Extra to pay = next period's principal (skips a whole future payment)
-        extraToCancel: nextPrincipal,
-        interestCancelled: nextInterest,
-        cancelRatio: cancelRatio
-      });
-
-      bal = nextBal;
-      if (bal <= 0) break;
+    // Estimate months to payoff with extra payment (local helper)
+    function estPayoffMonths(balance, apr, minPmt, extra) {
+      if (apr === 0) {
+        const pmt = minPmt + extra;
+        return pmt > 0 ? Math.ceil(balance / pmt) : 999;
+      }
+      const r = (apr / 100) / 12;
+      const pmt = minPmt + extra;
+      if (pmt <= balance * r) return 999;
+      return Math.ceil(-Math.log(1 - (balance * r) / pmt) / Math.log(1 + r));
     }
 
-    // Highlight the highest-ratio rows (best PILL opportunities)
-    const maxRatio = Math.max(...rows.map(r => r.cancelRatio));
+    // Find this debt's cascade extra using the same ranking as strategy view
+    const sorted = [...debts].sort((a, b) => {
+      const costA = (a.apr || 0) * (a.balance || 0);
+      const costB = (b.apr || 0) * (b.balance || 0);
+      if (costB !== costA) return costB - costA;
+      return (b.apr || 0) - (a.apr || 0);
+    });
+    let freedMinimums = 0;
+    let debtPrepay = 0;
+    for (const sd of sorted) {
+      const extra = prepayPool + freedMinimums;
+      if (sd.id === d.id) { debtPrepay = extra; break; }
+      const m = estPayoffMonths(sd.balance, sd.apr, sd.minPayment, extra);
+      if (m < 999 && sd.minPayment > 0) freedMinimums += sd.minPayment;
+    }
+
+    // Run the PILL engine: compare with and without prepayment
+    const comparison = PILLEngine.comparePrepayImpact(d.balance, d.apr, d.minPayment, debtPrepay);
+    const { baseline, withPrepay, monthsSaved, interestSaved } = comparison;
 
     const isInterestOnly = d.interestOnly === true;
     const hasEscrow = (d.escrow || 0) > 0;
     const paymentNumStart = d.paymentNum || 1;
 
-    let html = `
-      ${hasEscrow ? `<div style="margin-bottom:10px;padding:10px 14px;background:rgba(96,212,240,0.07);border:1px solid rgba(96,212,240,0.2);border-radius:8px;font-size:11px;color:var(--accent3);">
-        ℹ️ <strong>Escrow note:</strong> Your full mortgage payment is <strong>$5,700.21</strong>
-        (P&I $4,112.40 + Escrow $1,587.81). This schedule uses P&I only.
+    // Dynamic escrow/HELOC notes using actual debt values
+    const escrowAmt = d.escrow || 0;
+    const totalMortgagePmt = d.minPayment + escrowAmt;
+    const monthlyInterest = d.balance * (d.apr / 100) / 12;
+    const principalPortion = Math.max(0, d.minPayment - monthlyInterest);
+
+    // Format payoff date
+    function fmtDate(dt) {
+      return dt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    let html = '';
+
+    // ---- Payoff Summary Cards ----
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Payoff (Min Only)</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--danger);">${baseline.monthsToPayoff < 600 ? baseline.monthsToPayoff + ' mo' : 'N/A'}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${baseline.monthsToPayoff < 600 ? fmtDate(baseline.payoffDate) : ''}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Payoff (w/ PILL)</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--pill-green);">${withPrepay.monthsToPayoff < 600 ? withPrepay.monthsToPayoff + ' mo' : 'N/A'}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${withPrepay.monthsToPayoff < 600 ? fmtDate(withPrepay.payoffDate) : ''}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Months Saved</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--accent);">${monthsSaved > 0 ? monthsSaved : '—'}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Interest Saved</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--pill-green);">${interestSaved > 0 ? fmt(Math.round(interestSaved)) : '—'}</div>
+      </div>
+    </div>`;
+
+    // ---- Prepay Amount Note ----
+    if (debtPrepay > 0) {
+      html += `<div style="margin-bottom:12px;padding:10px 14px;background:rgba(200,240,96,0.06);border:1px solid rgba(200,240,96,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.6;">
+        PILL prepayment: <strong style="color:var(--accent);">${fmt(Math.round(debtPrepay))}/mo</strong> extra applied to principal each month.
+        Total interest paid: <strong style="color:var(--danger);">${fmt(Math.round(withPrepay.totalInterestPaid))}</strong> (vs ${fmt(Math.round(baseline.totalInterestPaid))} min-only).
+      </div>`;
+    }
+
+    // ---- Contextual Notes ----
+    if (hasEscrow) {
+      html += `<div style="margin-bottom:10px;padding:10px 14px;background:rgba(96,212,240,0.07);border:1px solid rgba(96,212,240,0.2);border-radius:8px;font-size:11px;color:var(--accent3);">
+        ℹ️ <strong>Escrow note:</strong> Your full mortgage payment is <strong>${fmt2(totalMortgagePmt,2)}</strong>
+        (P&I ${fmt2(d.minPayment,2)} + Escrow ${fmt2(escrowAmt,2)}). This schedule uses P&I only.
         When making extra PILL payments, send them <strong>separately</strong> marked
         <em>"apply to principal only"</em> — escrow does not reduce your balance.
-      </div>` : ''}
-      ${isInterestOnly ? `<div style="margin-bottom:10px;padding:10px 14px;background:rgba(240,96,96,0.07);border:1px solid rgba(240,96,96,0.2);border-radius:8px;font-size:11px;color:var(--danger);">
-        ⚡ <strong>Interest-Only HELOC:</strong> You are paying <strong>$900/mo</strong>
-        — $679.09 covers interest, and <strong>$220.91 is reducing your principal</strong>
-        every month. Every dollar above $679.09 goes straight to your balance.
-      </div>` : ''}
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
-        <strong style="color:var(--text);">How to read this:</strong> For each upcoming payment, 
-        the <span style="color:var(--accent)">Extra Principal</span> column shows how much extra to send 
-        <em>with that payment</em>. Doing so skips the next scheduled payment entirely and cancels that 
-        interest charge. The <span style="color:var(--pill-green)">Interest Cancelled</span> column shows 
-        exactly what you save. Rows highlighted in green are your highest-leverage PILL opportunities.
+      </div>`;
+    }
+    if (isInterestOnly) {
+      html += `<div style="margin-bottom:10px;padding:10px 14px;background:rgba(240,96,96,0.07);border:1px solid rgba(240,96,96,0.2);border-radius:8px;font-size:11px;color:var(--danger);">
+        ⚡ <strong>Interest-Only HELOC:</strong> You are paying <strong>${fmt2(d.minPayment,2)}/mo</strong>
+        — ${fmt2(monthlyInterest,2)} covers interest, and <strong>${fmt2(principalPortion,2)} is reducing your principal</strong>
+        every month. Every dollar above ${fmt2(monthlyInterest,2)} goes straight to your balance.
+      </div>`;
+    }
+
+    // ---- Full Amortization Schedule (expandable) ----
+    const scheduleData = debtPrepay > 0 ? withPrepay.schedule : baseline.schedule;
+    const isExpanded = pillScheduleExpanded[debtId] || false;
+    const PREVIEW_ROWS = 12;
+    const showRows = isExpanded ? scheduleData : scheduleData.slice(0, PREVIEW_ROWS);
+
+    html += `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        <strong style="color:var(--text);">Full PILL Amortization Schedule</strong> —
+        ${scheduleData.length} payments showing per-month breakdown of Interest, Principal, Prepayment, and Balance.
+        ${debtPrepay > 0 ? 'Includes <span style="color:var(--accent);">+' + fmt(Math.round(debtPrepay)) + '/mo</span> PILL prepayment.' : 'Minimum payments only — add prepayment via Income & Expenses tab.'}
       </div>
       <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:500px;">
+      <table style="width:100%;border-collapse:collapse;min-width:580px;">
         <thead>
           <tr>
-            <th style="text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Pmt #</th>
-            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Interest Portion</th>
-            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Principal Portion</th>
-            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Remaining Bal</th>
-            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:8px 8px;border-bottom:1px solid var(--border);">Extra Principal</th>
-            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--pill-green);padding:8px 8px;border-bottom:1px solid var(--border);">Int. Cancelled</th>
-            <th style="text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border);">Leverage</th>
+            <th style="text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--border);">#</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--border);">Start Bal</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--danger);padding:8px 6px;border-bottom:1px solid var(--border);">Interest</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--border);">Principal</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:8px 6px;border-bottom:1px solid var(--border);">Prepay</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--border);">Total Pmt</th>
+            <th style="text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--border);">End Bal</th>
           </tr>
         </thead>
         <tbody>`;
 
-    rows.forEach(row => {
-      const isHighlight = row.cancelRatio >= maxRatio * 0.85;
-      const leveragePct = maxRatio > 0 ? Math.round((row.cancelRatio / maxRatio) * 100) : 0;
-      const barColor = leveragePct >= 85 ? 'var(--pill-green)' : leveragePct >= 60 ? 'var(--accent2)' : 'var(--muted)';
-      html += `<tr style="${isHighlight ? 'background:rgba(76,175,125,0.05);' : ''}">
-        <td style="padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;">
-          ${isHighlight ? '<span style="color:var(--pill-green);font-weight:600;">▶ </span>' : ''}${row.num}
-        </td>
-        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--danger);">${fmt2(row.interest,2)}</td>
-        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;">${fmt2(row.principal,2)}</td>
-        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--muted);">${fmt2(row.balance,0)}</td>
-        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--accent);font-weight:600;">+${fmt2(row.extraToCancel,2)}</td>
-        <td style="text-align:right;padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--pill-green);font-weight:600;">${fmt2(row.interestCancelled,2)}</td>
-        <td style="padding:8px 8px;border-bottom:1px solid rgba(42,43,39,0.5);">
-          <div style="background:var(--surface2);border-radius:100px;height:6px;overflow:hidden;width:60px;margin-left:auto;">
-            <div style="width:${leveragePct}%;height:100%;background:${barColor};border-radius:100px;"></div>
-          </div>
-        </td>
+    showRows.forEach(row => {
+      const pmtLabel = paymentNumStart + row.month - 1;
+      const hasPrepay = row.prepaymentApplied > 0.005;
+      html += `<tr${hasPrepay ? ' style="background:rgba(200,240,96,0.03);"' : ''}>
+        <td style="padding:6px 6px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;">${pmtLabel}</td>
+        <td style="text-align:right;padding:6px 6px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--muted);">${fmt2(row.startingBalance,0)}</td>
+        <td style="text-align:right;padding:6px 6px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--danger);">${fmt2(row.interestCharged,2)}</td>
+        <td style="text-align:right;padding:6px 6px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;">${fmt2(row.principalPaid,2)}</td>
+        <td style="text-align:right;padding:6px 6px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--accent);${hasPrepay ? 'font-weight:600;' : ''}">${hasPrepay ? '+' + fmt2(row.prepaymentApplied,2) : '—'}</td>
+        <td style="text-align:right;padding:6px 6px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;">${fmt2(row.totalPayment,2)}</td>
+        <td style="text-align:right;padding:6px 6px;border-bottom:1px solid rgba(42,43,39,0.5);font-size:12px;color:var(--muted);">${fmt2(row.endingBalance,0)}</td>
       </tr>`;
     });
 
-    html += `</tbody></table></div>
-      <div style="margin-top:12px;padding:12px 14px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.7;">
-        <strong style="color:var(--accent)">▶ Green rows</strong> = highest-leverage PILL moments. 
-        Sending the extra principal amount <em>with</em> that exact payment cancels the most interest per dollar spent. 
+    html += `</tbody></table></div>`;
+
+    // Expand/collapse toggle
+    if (scheduleData.length > PREVIEW_ROWS) {
+      html += `<div style="text-align:center;margin-top:10px;">
+        <button onclick="togglePillSchedule(${debtId})" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 20px;color:var(--accent);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;">
+          ${isExpanded ? '▲ Show first 12 payments' : '▼ Show all ' + scheduleData.length + ' payments'}
+        </button>
+      </div>`;
+    }
+
+    // Footer note
+    html += `<div style="margin-top:12px;padding:12px 14px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.7;">
+        <strong style="color:var(--accent)">PILL Method:</strong>
+        <strong>P</strong>repayment goes 100% to principal ·
+        <strong>I</strong>nterest = balance × APR/12 ·
+        <strong>L</strong>oan balance tracked each period ·
+        <strong>L</strong>iquidation schedule shows your exact payoff path.
         Contact your lender and specify <strong style="color:var(--text)">"apply to principal only"</strong> when making extra payments.
       </div>`;
 

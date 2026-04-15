@@ -554,7 +554,7 @@
         <span style="color:var(--accent);">Every penny optimized.</span>
       </div>
       <div id="save-indicator" style="font-size:11px;min-height:16px;transition:opacity .3s;"></div>
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:0.04em;">Debt data last synced: <span style="color:var(--accent);">April 14, 2026</span> via Plaid</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:0.04em;">Debt data last synced: <span style="color:var(--accent);">April 15, 2026</span> via Plaid</div>
       <button onclick="clearSavedData()" class="btn btn-outline btn-sm" style="margin-top:8px;font-size:10px;padding:5px 12px;">↺ Reset to Defaults</button>
     </div>
   </header>
@@ -1523,7 +1523,6 @@
     if (debts.some(d => d.familyContribution > 0)) alerts.push(['info', 'ℹ️ Mortgage: Gross ~$3,600/mo, but ~$3,400/mo offset by family contributions (Zelle + Apple Cash). Your net out-of-pocket is ~$200-300/mo.']);
     // Savings/liquidity warning
     alerts.push(['warn', '🛡 <strong>Liquidity first:</strong> Do NOT pull from savings for debt payoff. Maintain $6,000 liquid minimum for house, medical, and legal emergencies. Use monthly cash flow for extra debt payments.']);
-    if (debts.some(d => d.paymentNote && d.name.includes('Subaru'))) alerts.push(['info', 'ℹ️ Subaru WRX: Minimum payment is estimated at $250/mo — verify exact amount with your lender.']);
     if (pool >= 500) alerts.push(['success', '✅ You have a healthy prepay pool. Concentrated application per the PILL method could save ' + fmt(totalInterestMin - totalInterestPill) + ' in interest.']);
     alertZone.innerHTML = alerts.map(([type, msg]) => `<div class="alert alert-${type}">${msg}</div>`).join('');
   }
@@ -2513,7 +2512,7 @@
     document.getElementById('exp-dining').value     = 1652.01;// Tithe & Offering
     document.getElementById('exp-transport').value  = 200;    // Gas envelope
     document.getElementById('exp-other').value      = 400;    // Dining/Lunch $250 + Personal/Play $150
-    // DEBTS — Verified April 14, 2026
+    // DEBTS — Verified April 15, 2026
     debts = [];
     debtCounter = 0;
 
@@ -2527,12 +2526,12 @@
     debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays View® Mastercard®', balance: 400.87, apr: 25.99, minPayment: 30, months: 18, nextDue: '2026-05-07' });
     // Discover it Miles: balance $3,116.53 | APR 19.74% | min $63 | due 04/14/2026
     debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover it Miles Card', balance: 3116.53, apr: 19.74, minPayment: 63, months: 48, nextDue: '2026-04-14' });
-    // Apple Card: balance $1,512.78 | APR 19.49% | min ~$29 | Goal: pay off → use as daily spend card (pay in full monthly)
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Apple Card', balance: 1512.78, apr: 19.49, minPayment: 29, months: 48, paymentNote: 'Goal: Pay off → use as daily spending card (pay in full monthly)' });
+    // Apple Card: balance $1,512.78 | APR 19.49% | min $122 | Goal: pay off → use as daily spend card (pay in full monthly)
+    debts.push({ id: ++debtCounter, type: 'credit', name: 'Apple Card', balance: 1512.78, apr: 19.49, minPayment: 122, months: 48, paymentNote: 'Goal: Pay off → use as daily spending card (pay in full monthly)' });
 
     // ── Auto Loan ──
-    // Subaru WRX 2017: balance $8,474.30 | APR 5.14% | min ~$250 (estimate — verify exact payment)
-    debts.push({ id: ++debtCounter, type: 'car', name: '2017 Subaru WRX', balance: 8474.30, apr: 5.14, minPayment: 250, months: 36, paymentNote: 'Verify exact payment amount' });
+    // Subaru WRX 2017: balance $8,474.30 | APR 5.14% | min $296
+    debts.push({ id: ++debtCounter, type: 'car', name: '2017 Subaru WRX', balance: 8474.30, apr: 5.14, minPayment: 296, months: 36 });
 
     // ── IO HELOC – 7340 Hill Drive ──
     // Interest-only HELOC. Balance $117,992.02 | 7.50% variable (prime-tied)

@@ -1154,38 +1154,60 @@
 
   function saveInputs() {
     try {
+      const inputs = {};
       INPUT_IDS.forEach(id => {
         const el = document.getElementById(id);
-        if (el) localStorage.setItem('pill_' + id, el.value);
+        if (el) inputs[id] = el.value;
       });
-      // Save debts
-      localStorage.setItem('pill_debts', JSON.stringify(debts));
-      localStorage.setItem('pill_debtCounter', debtCounter);
+      window.PILLState.save({ inputs, debts, debtCounter });
     } catch(e) {}
   }
 
   function loadSavedInputs() {
     try {
-      const savedDebts = localStorage.getItem('pill_debts');
-      const hasSavedData = INPUT_IDS.some(id => localStorage.getItem('pill_' + id) !== null) || savedDebts;
-      if (!hasSavedData) return false; // no saved data, use defaults
+      // New versioned state first.
+      const state = window.PILLState.load();
+      if (state?.data) {
+        const saved = state.data;
+        INPUT_IDS.forEach(id => {
+          const el = document.getElementById(id);
+          if (el && saved.inputs?.[id] !== undefined) el.value = saved.inputs[id];
+        });
+        if (Array.isArray(saved.debts)) {
+          debts = saved.debts;
+          debtCounter = Number(saved.debtCounter) || debts.length;
+        }
+        return true;
+      }
 
+      // One-time migration path from the legacy per-field localStorage keys.
+      const savedDebts = localStorage.getItem('pill_debts');
+      const hasLegacyData = INPUT_IDS.some(id => localStorage.getItem('pill_' + id) !== null) || savedDebts;
+      if (!hasLegacyData) return false;
+
+      const inputs = {};
       INPUT_IDS.forEach(id => {
         const val = localStorage.getItem('pill_' + id);
         const el = document.getElementById(id);
-        if (val !== null && el) el.value = val;
+        if (val !== null && el) {
+          el.value = val;
+          inputs[id] = val;
+        }
       });
 
       if (savedDebts) {
         debts = JSON.parse(savedDebts);
         debtCounter = parseInt(localStorage.getItem('pill_debtCounter')) || debts.length;
       }
+
+      window.PILLState.save({ inputs, debts, debtCounter });
       return true;
     } catch(e) { return false; }
   }
 
   function clearSavedData() {
     try {
+      window.PILLState.clear();
       INPUT_IDS.forEach(id => localStorage.removeItem('pill_' + id));
       localStorage.removeItem('pill_debts');
       localStorage.removeItem('pill_debtCounter');
@@ -1289,28 +1311,41 @@
     // Flash save indicator
     const ind = document.getElementById('save-indicator');
     if (ind) { ind.textContent = '💾 Saved'; ind.style.color = 'var(--muted)'; }
-    // Income
-    const income = getVal('inc-primary') + getVal('inc-secondary') + getVal('inc-side') + getVal('inc-other');
+    const snapshot = window.PILLCore.monthlySnapshot({
+      income: [
+        getVal('inc-primary'),
+        getVal('inc-secondary'),
+        getVal('inc-side'),
+        getVal('inc-other')
+      ],
+      expenses: [
+        getVal('exp-grocery'),
+        getVal('exp-utilities'),
+        getVal('exp-insurance'),
+        getVal('exp-subs'),
+        getVal('exp-transport'),
+        getVal('exp-dining'),
+        getVal('exp-other')
+      ],
+      debts
+    });
+
+    const income = snapshot.totalIncome;
+    const expenses = snapshot.totalExpenses;
+    const minPmts = snapshot.debtMinimums;
+    const outflow = snapshot.totalOutflow;
+    const available = snapshot.availableForPill;
+
     document.getElementById('total-income').textContent = fmt(income);
-
-    // Expenses
-    const expenses = getVal('exp-grocery') + getVal('exp-utilities') + getVal('exp-insurance') +
-                     getVal('exp-subs') + getVal('exp-transport') + getVal('exp-dining') + getVal('exp-other');
     document.getElementById('total-expenses').textContent = fmt(expenses);
-
-    // Debt min payments total
-    const minPmts = debts.reduce((s, d) => s + d.minPayment, 0);
     document.getElementById('stat-debt-pmts').textContent = fmt(minPmts);
     document.getElementById('stat-min-pmts').textContent = fmt(minPmts);
-
-    const outflow = expenses + minPmts;
     document.getElementById('stat-outflow').textContent = fmt(outflow);
-    const available = income - outflow;
     document.getElementById('stat-available').textContent = fmt(available);
     document.getElementById('stat-available').className = 'stat-value ' + (available < 0 ? 'red' : 'green');
 
     // Debt summary
-    const totalDebt = debts.reduce((s,d) => s + d.balance, 0);
+    const totalDebt = window.PILLCore.totalDebtBalance(debts);
     document.getElementById('stat-total-debt').textContent = fmt(totalDebt);
 
     const weightedRate = totalDebt > 0
@@ -1337,12 +1372,7 @@
 
     // PILL avalanche: highest APR first. Ties broken by lower balance (eliminate faster).
     // Amazon (29.49%) → Barclays (25.99%) → Discover (19.74%) → Apple (19.49%) → HELOC (7.50%) → Subaru (5.14%) → Mortgage (3.13%)
-    const sorted = [...debts].sort((a, b) => {
-      // Higher APR first
-      if ((b.apr || 0) !== (a.apr || 0)) return (b.apr || 0) - (a.apr || 0);
-      // Ties: smaller balance first (quicker payoff)
-      return (a.balance || 0) - (b.balance || 0);
-    });
+    const sorted = window.PILLCore.sortDebtsByApr(debts);
 
     // Estimate total interest min-only
     function totalInterestMinOnly(d) {

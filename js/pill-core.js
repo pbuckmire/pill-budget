@@ -35,6 +35,10 @@ window.PILLCore = Object.freeze({
   },
 
   sortDebtsByApr(debts) {
-    return [...(debts || [])].sort((a, b) => (Number(b.apr) || 0) - (Number(a.apr) || 0));
+    return [...(debts || [])].sort((a, b) => {
+      const aprDelta = (Number(b.apr) || 0) - (Number(a.apr) || 0);
+      if (aprDelta !== 0) return aprDelta;
+      return (Number(a.balance) || 0) - (Number(b.balance) || 0);
+    });
   }
 });

@@ -554,7 +554,7 @@
         <span style="color:var(--accent);">Every penny optimized.</span>
       </div>
       <div id="save-indicator" style="font-size:11px;min-height:16px;transition:opacity .3s;"></div>
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:0.04em;">Debt data last synced: <span style="color:var(--accent);">April 15, 2026</span> via Plaid</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:0.04em;">Data source: <span style="color:var(--accent);">legacy bootstrap snapshot</span> · live sync pending</div>
       <button onclick="clearSavedData()" class="btn btn-outline btn-sm" style="margin-top:8px;font-size:10px;padding:5px 12px;">↺ Reset to Defaults</button>
     </div>
   </header>
@@ -1117,6 +1117,9 @@
 
 </div><!-- /app -->
 
+<script src="js/default-data.js"></script>
+<script src="js/pill-core.js"></script>
+<script src="js/app-state.js"></script>
 <script>
   let debts = [];
   let debtCounter = 0;
@@ -2498,51 +2501,33 @@
 
   // ---- PRE-LOAD USER DATA ----
   function loadDefaults() {
+    const data = window.PILL_DEFAULT_DATA;
+    if (!data) {
+      console.warn('PILL default data module did not load.');
+      return;
+    }
+
     // INCOME
-    document.getElementById('inc-primary').value  = 7380.88;
-    document.getElementById('inc-secondary').value = 1200;
-    document.getElementById('inc-side').value      = 300;
-    document.getElementById('inc-other').value     = 2100;
+    document.getElementById('inc-primary').value   = data.income.primary;
+    document.getElementById('inc-secondary').value = data.income.secondary;
+    document.getElementById('inc-side').value      = data.income.side;
+    document.getElementById('inc-other').value     = data.income.other;
+
     // EXPENSES
-    // Expenses from Envelope Money app (03/15/2026)
-    document.getElementById('exp-insurance').value  = 514;    // State Farm
-    document.getElementById('exp-subs').value       = 108.54; // Subscriptions envelope
-    document.getElementById('exp-utilities').value  = 303.67; // Electricity $187 + Water $116.67 avg
-    document.getElementById('exp-grocery').value    = 140;    // Lawn Services
-    document.getElementById('exp-dining').value     = 1652.01;// Tithe & Offering
-    document.getElementById('exp-transport').value  = 200;    // Gas envelope
-    document.getElementById('exp-other').value      = 400;    // Dining/Lunch $250 + Personal/Play $150
-    // DEBTS — Verified April 15, 2026
+    document.getElementById('exp-insurance').value = data.expenses.insurance;
+    document.getElementById('exp-subs').value      = data.expenses.subscriptions;
+    document.getElementById('exp-utilities').value = data.expenses.utilities;
+    document.getElementById('exp-grocery').value   = data.expenses.lawn;
+    document.getElementById('exp-dining').value    = data.expenses.titheOffering;
+    document.getElementById('exp-transport').value = data.expenses.transportation;
+    document.getElementById('exp-other').value     = data.expenses.otherLiving;
+
+    // DEBTS
     debts = [];
     debtCounter = 0;
-
-    // ── Credit Cards (PILL avalanche order — highest APR first) ──
-    // Amazon Prime Store Card (Synchrony, ending 0424): balance $455.26 | APR 29.49% | min $29 | due 05/05/2026
-    // ⚡ PILL PRIORITY TARGET #1 — highest APR + small balance = fastest payoff
-    // NOTE: Cancel "Payment Security" optional fee ($7.43/mo) — call 1-800-815-4051
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Amazon Prime Store Card (0424)', balance: 455.26, apr: 29.49, minPayment: 29, months: 18, nextDue: '2026-05-05', paymentNote: 'Synchrony Bank — Cancel "Payment Security" fee ($7.43/mo): call 1-800-815-4051' });
-    // Barclays View Mastercard: balance $400.87 | APR 25.99% | min $30 | due 05/07/2026
-    // ⚡ PILL PRIORITY TARGET #2 — second-highest APR + smallest balance
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Barclays View® Mastercard®', balance: 400.87, apr: 25.99, minPayment: 30, months: 18, nextDue: '2026-05-07' });
-    // Discover it Miles: balance $3,116.53 | APR 19.74% | min $63 | due 04/14/2026
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Discover it Miles Card', balance: 3116.53, apr: 19.74, minPayment: 63, months: 48, nextDue: '2026-04-14' });
-    // Apple Card: balance $1,512.78 | APR 19.49% | min $122 | Goal: pay off → use as daily spend card (pay in full monthly)
-    debts.push({ id: ++debtCounter, type: 'credit', name: 'Apple Card', balance: 1512.78, apr: 19.49, minPayment: 122, months: 48, paymentNote: 'Goal: Pay off → use as daily spending card (pay in full monthly)' });
-
-    // ── Auto Loan ──
-    // Subaru WRX 2017: balance $8,474.30 | APR 5.14% | min $296
-    debts.push({ id: ++debtCounter, type: 'car', name: '2017 Subaru WRX', balance: 8474.30, apr: 5.14, minPayment: 296, months: 36 });
-
-    // ── IO HELOC – 7340 Hill Drive ──
-    // Interest-only HELOC. Balance $117,992.02 | 7.50% variable (prime-tied)
-    // Monthly interest-only payment: $117,992.02 × 7.5% / 12 = ~$737.45/mo
-    debts.push({ id: ++debtCounter, type: 'mortgage', name: 'IO HELOC – 7340 Hill Drive', balance: 117992.02, apr: 7.5, minPayment: 737.45, months: 120, interestOnly: true });
-
-    // ── 10/1 ARM Mortgage (Primary Home) ──
-    // Balance $858,787.89 | APR 3.13% | Gross payment ~$3,600/mo
-    // Family contributions offset ~$3,400/mo ($2,100 Zelle + ~$1,200-$1,500 Apple Cash)
-    // User's net out-of-pocket: ~$200-300/mo
-    debts.push({ id: ++debtCounter, type: 'mortgage', name: '10/1 ARM Mortgage', balance: 858787.89, apr: 3.13, minPayment: 3600, months: 303, familyContribution: 3400, netOutOfPocket: 250 });
+    data.debts.forEach(debt => {
+      debts.push({ id: ++debtCounter, ...debt });
+    });
   }
 
   window.addEventListener('DOMContentLoaded', () => {
